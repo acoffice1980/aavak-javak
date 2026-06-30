@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aavak Javak — Office Records</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fef6e4;
+    --surface: #ffffff;
+    --surface2: #fff3d6;
+    --border: rgba(0,0,0,0.08);
+    --border-md: rgba(0,0,0,0.15);
+    --text: #2d2a3d;
+    --text2: #6b6685;
+    --text3: #a39fbb;
+    --accent: #6c5ce7;
+    --accent2: #00cec9;
+    --accent-bg: #e8e4ff;
+    --accent-text: #5142d6;
+    --green: #00b894;
+    --green-bg: #d4f8ec;
+    --green-text: #008a6b;
+    --red: #ff6b6b;
+    --red-bg: #ffe3e3;
+    --red-text: #e0392f;
+    --amber: #fdaa1b;
+    --amber-bg: #fff2d6;
+    --amber-text: #c8780a;
+    --pink: #ff7eb6;
+    --shadow: 0 4px 14px rgba(108,92,231,0.10);
+    --shadow-lg: 0 8px 24px rgba(108,92,231,0.16);
+    --radius: 16px;
+    --radius-sm: 12px;
+  }
+  [data-theme="dark"] {
+    --bg: #1b1a2e;
+    --surface: #262540;
+    --surface2: #312f52;
+    --border: rgba(255,255,255,0.08);
+    --border-md: rgba(255,255,255,0.16);
+    --text: #f1f0ff;
+    --text2: #b0adcf;
+    --text3: #8884b8;
+    --accent: #a29bfe;
+    --accent2: #55efc4;
+    --accent-bg: #3b3870;
+    --accent-text: #cfcaff;
+    --green: #55efc4;
+    --green-bg: #1f4a3e;
+    --green-text: #9af0d6;
+    --red: #ff8787;
+    --red-bg: #4a2535;
+    --red-text: #ffb3b3;
+    --amber: #ffd166;
+    --amber-bg: #4a3a1f;
+    --amber-text: #ffe2a0;
+    --pink: #ff9bcb;
+    --shadow: 0 4px 16px rgba(0,0,0,0.35);
+    --shadow-lg: 0 10px 28px rgba(0,0,0,0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Poppins', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  h1, h2, h3, .auth-logo-text, .auth-title, .form-card-title, .modal-title, .share-title,
+  .topbar-logo, .stat-value, .tab, .recent-title { font-family: 'Baloo 2', cursive; }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 45%, #00cec9 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  #auth-screen::before, #auth-screen::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+  }
+  #auth-screen::before { width: 280px; height: 280px; top: -80px; left: -80px; }
+  #auth-screen::after { width: 220px; height: 220px; bottom: -60px; right: -60px; background: rgba(255,209,102,0.18); }
+  .auth-card {
+    background: var(--surface);
+    border: none;
+    border-radius: 24px;
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+    position: relative;
+    z-index: 1;
+  }
+  .auth-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+  .auth-logo-icon {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 6px 14px rgba(108,92,231,0.35);
+    transform: rotate(-6deg);
+  }
+  .auth-logo-text { font-size: 20px; font-weight: 700; color: var(--text); font-family: 'Baloo 2', cursive; }
+  .auth-logo-sub { font-size: 12px; color: var(--text2); }
+  .auth-title { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .auth-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.8rem; }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; letter-spacing: 0.3px; }
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--border-md);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Baloo 2', cursive;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+    margin-top: 4px;
+    box-shadow: 0 6px 16px rgba(108,92,231,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(108,92,231,0.38); }
+  .btn-primary:active { transform: translateY(0); }
+  .auth-hint { font-size: 12px; color: var(--text3); margin-top: 1rem; text-align: center; }
+  .auth-error { font-size: 13px; color: var(--red); margin-top: 8px; text-align: center; min-height: 18px; }
+
+  /* ── APP SHELL ── */
+  #app { display: none; }
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-bottom: none;
+    padding: 0 1.5rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow-lg);
+  }
+  .topbar-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 18px; color: #fff;
+    flex-shrink: 0;
+  }
+  .topbar-logo-icon {
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 15px; font-weight: 800;
+    transform: rotate(-6deg);
+  }
+  .topbar-search {
+    flex: 1;
+    max-width: 420px;
+    position: relative;
+  }
+  .topbar-search input {
+    width: 100%;
+    padding: 8px 14px 8px 36px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.92);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: box-shadow 0.15s;
+  }
+  .topbar-search input:focus { box-shadow: 0 0 0 3px rgba(255,255,255,0.4); background: #fff; }
+  .topbar-search-icon {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3); font-size: 15px;
+    pointer-events: none;
+  }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .theme-btn {
+    width: 34px; height: 34px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.22);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 17px;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .theme-btn:hover { background: rgba(255,255,255,0.35); transform: rotate(15deg) scale(1.08); }
+  .user-chip {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.22);
+    border: none;
+    border-radius: 20px;
+    padding: 4px 12px 4px 4px;
+    cursor: pointer;
+  }
+  .user-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--accent);
+    font-size: 12px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Baloo 2', cursive;
+  }
+  .user-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .logout-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.22);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .logout-btn:hover { background: var(--red); color: #fff; }
+
+  /* ── TABS ── */
+  .tabs {
+    background: var(--surface);
+    border-bottom: none;
+    padding: 10px 1.5rem;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .tab {
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    border: 2px solid transparent;
+    background: var(--surface2);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.15s, color 0.15s, border-color 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab.active {
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-color: transparent;
+    box-shadow: 0 4px 10px rgba(108,92,231,0.3);
+  }
+  .tab:hover:not(.active) { transform: translateY(-1px); border-color: var(--accent); color: var(--accent); }
+  .tab-badge {
+    background: rgba(255,255,255,0.3);
+    color: inherit;
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+  .tab:not(.active) .tab-badge { background: var(--accent-bg); color: var(--accent-text); }
+
+  /* ── MAIN CONTENT ── */
+  .main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+  }
+  .stat-label { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .stat-value { font-size: 24px; font-weight: 600; color: var(--text); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.amber { color: var(--amber); }
+
+  /* ── ADD ENTRY FORM ── */
+  .form-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+  }
+  .form-card-title {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .form-grid .field { margin-bottom: 0; }
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+  .btn-add {
+    padding: 9px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-add:hover { opacity: 0.88; }
+  .btn-cancel {
+    padding: 9px 14px;
+    background: transparent;
+    color: var(--text2);
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-cancel:hover { background: var(--surface2); }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-bar select, .filter-bar input {
+    padding: 7px 10px;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); }
+  .filter-count { font-size: 12px; color: var(--text3); margin-left: auto; }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 0.5px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 14px;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 0.5px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-aavak { background: var(--green-bg); color: var(--green-text); }
+  .badge-javak { background: var(--red-bg); color: var(--red-text); }
+  .badge-pending { background: var(--amber-bg); color: var(--amber-text); }
+  .badge-done { background: var(--green-bg); color: var(--green-text); }
+  .icon-btn {
+    padding: 4px 8px;
+    background: transparent;
+    border: 0.5px solid var(--border);
+    border-radius: 5px;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.12s;
+  }
+  .icon-btn:hover { background: var(--surface2); }
+  .icon-btn.del:hover { background: var(--red-bg); color: var(--red-text); border-color: var(--red); }
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text3);
+  }
+  .empty-state-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; }
+
+  /* ── SHARE PANEL ── */
+  .share-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+  }
+  .share-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .share-text {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: monospace;
+    white-space: pre-wrap;
+    max-height: 220px;
+    overflow-y: auto;
+    line-height: 1.7;
+  }
+  .share-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-share {
+    padding: 8px 14px;
+    background: var(--green-bg);
+    color: var(--green-text);
+    border: 0.5px solid var(--green);
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-share:hover { opacity: 0.85; }
+  .btn-copy {
+    padding: 8px 14px;
+    background: var(--surface2);
+    color: var(--text2);
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-copy:hover { background: var(--border); }
+
+  /* ── DASHBOARD ── */
+  .recent-title {
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .activity-list { display: flex; flex-direction: column; gap: 8px; }
+  .activity-item {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .activity-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .activity-dot.green { background: var(--green); }
+  .activity-dot.red { background: var(--red); }
+  .activity-info { flex: 1; }
+  .activity-main { font-size: 13px; font-weight: 500; }
+  .activity-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .activity-time { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: var(--surface);
+    border: 0.5px solid var(--border-md);
+    border-radius: 14px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn-danger {
+    padding: 9px 16px;
+    background: var(--red-bg);
+    color: var(--red-text);
+    border: 0.5px solid var(--red);
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--text);
+    color: var(--surface);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 999;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    opacity: 0;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 600px) {
+    .main { padding: 1rem; }
+    .topbar { padding: 0 1rem; }
+    .tabs { padding: 0 1rem; overflow-x: auto; }
+    th, td { padding: 8px 10px; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">AJ</div>
+      <div>
+        <div class="auth-logo-text">Aavak Javak</div>
+        <div class="auth-logo-sub">Office Document Records</div>
+      </div>
+    </div>
+    <div class="auth-title">Login करा</div>
+    <div class="auth-sub">Username आणि password टाका</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="login-name" placeholder="उदा. admin" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Login करा →</button>
+    <div class="auth-error" id="login-err"></div>
+    <div class="auth-hint">Default admin login → username: admin, password: admin123</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-icon">AJ</div>
+      Aavak Javak
+    </div>
+    <div class="topbar-search">
+      <span class="topbar-search-icon">🔍</span>
+      <input type="text" id="global-search" placeholder="Customer, document शोधा..." oninput="onGlobalSearch(this.value)">
+    </div>
+    <div class="topbar-right">
+      <button class="theme-btn" onclick="toggleTheme()" title="Theme बदला">🌙</button>
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">S</div>
+        <span class="user-name" id="user-display">Sudhir</span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+    <button class="tab" onclick="switchTab('aavak',this)">📥 Aavak <span class="tab-badge" id="aavak-count">0</span></button>
+    <button class="tab" onclick="switchTab('javak',this)">📤 Javak <span class="tab-badge" id="javak-count">0</span></button>
+    <button class="tab" onclick="switchTab('customer',this)">👤 Customer</button>
+    <button class="tab" onclick="switchTab('history',this)">🕒 History</button>
+    <button class="tab" onclick="switchTab('share',this)">📋 Share / Report</button>
+    <button class="tab" id="staff-tab-btn" onclick="switchTab('staff',this)" style="display:none">👥 Staff Login</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="sec-dashboard" class="section active">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">एकूण Aavak</div>
+          <div class="stat-value green" id="stat-aavak">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">एकूण Javak</div>
+          <div class="stat-value red" id="stat-javak">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending Entries</div>
+          <div class="stat-value amber" id="stat-pending">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">आजच्या Entries</div>
+          <div class="stat-value" id="stat-today">0</div>
+        </div>
+      </div>
+      <div id="overdue-section"></div>
+
+      <div class="recent-title">अलीकडील नोंदी</div>
+      <div class="activity-list" id="recent-list">
+        <div class="empty-state"><div class="empty-state-icon">📂</div><p>अजून कोणतीही नोंद नाही</p></div>
+      </div>
+
+      <div class="form-card" style="margin-top:1.5rem">
+        <div class="form-card-title">🔑 तुमचा Password बदला</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>सध्याचा Password</label>
+            <input type="password" id="pw-current" placeholder="सध्याचा password">
+          </div>
+          <div class="field">
+            <label>नवीन Password</label>
+            <input type="password" id="pw-new" placeholder="नवीन password">
+          </div>
+          <div class="field">
+            <label>नवीन Password पुन्हा टाका</label>
+            <input type="password" id="pw-confirm" placeholder="पुन्हा टाका">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-add" onclick="changePassword()">🔑 Password बदला</button>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-top:1.5rem">
+        <div class="form-card-title">💾 Data Backup / Restore</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:12px">तुमचा सगळा data (नोंदी + staff logins) एका file मध्ये save करा, आणि गरज पडल्यास पुन्हा load करा.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-add" onclick="downloadBackup()">⬇️ Backup Download करा</button>
+          <button class="btn-cancel" onclick="document.getElementById('restore-file').click()">⬆️ Backup Restore करा</button>
+          <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreBackup(this.files[0])">
+        </div>
+      </div>
+    </div>
+
+    <!-- AAVAK -->
+    <div id="sec-aavak" class="section">
+      <div class="form-card">
+        <div class="form-card-title">📥 नवीन Aavak नोंद करा</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Customer चे नाव *</label>
+            <input type="text" id="a-customer" placeholder="उदा. Ramesh Sharma">
+          </div>
+          <div class="field">
+            <label>Document/s * (एकापेक्षा जास्त असल्यास , ने वेगळे करा)</label>
+            <input type="text" id="a-document" placeholder="उदा. ITR 2023-24, Pan Card, Aadhar">
+          </div>
+          <div class="field">
+            <label>तारीख *</label>
+            <input type="date" id="a-date">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="a-status">
+              <option value="Pending">Pending</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>शेरा (Optional)</label>
+          <input type="text" id="a-note" placeholder="अतिरिक्त माहिती...">
+        </div>
+        <div class="form-actions">
+          <button class="btn-add" onclick="addEntry('aavak')">📥 Aavak नोंद करा</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="a-search" placeholder="🔍 Customer / Document..." oninput="renderTable('aavak')" style="min-width:200px">
+        <select id="a-filter-status" onchange="renderTable('aavak')">
+          <option value="">सर्व Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Done">Done</option>
+        </select>
+        <input type="date" id="a-filter-date" onchange="renderTable('aavak')" title="तारखेनुसार फिल्टर">
+        <span class="filter-count" id="a-count-label"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Document</th>
+              <th>तारीख</th>
+              <th>नोंद केले</th>
+              <th>Status</th>
+              <th>शेरा</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="aavak-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- JAVAK -->
+    <div id="sec-javak" class="section">
+      <div class="form-card">
+        <div class="form-card-title">📤 नवीन Javak नोंद करा</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Customer चे नाव *</label>
+            <input type="text" id="j-customer" placeholder="उदा. Ramesh Sharma">
+          </div>
+          <div class="field">
+            <label>Document/s * (एकापेक्षा जास्त असल्यास , ने वेगळे करा)</label>
+            <input type="text" id="j-document" placeholder="उदा. ITR Form, Pan Card copy">
+          </div>
+          <div class="field">
+            <label>Return तारीख (Optional)</label>
+            <input type="date" id="j-return" title="हे document कधी परत यायचे आहे">
+          </div>
+          <div class="field">
+            <label>तारीख *</label>
+            <input type="date" id="j-date">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="j-status">
+              <option value="Pending">Pending</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>शेरा (Optional)</label>
+          <input type="text" id="j-note" placeholder="अतिरिक्त माहिती...">
+        </div>
+        <div class="form-actions">
+          <button class="btn-add" onclick="addEntry('javak')">📤 Javak नोंद करा</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="j-search" placeholder="🔍 Customer / Document..." oninput="renderTable('javak')" style="min-width:200px">
+        <select id="j-filter-status" onchange="renderTable('javak')">
+          <option value="">सर्व Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Done">Done</option>
+        </select>
+        <input type="date" id="j-filter-date" onchange="renderTable('javak')" title="तारखेनुसार फिल्टर">
+        <span class="filter-count" id="j-count-label"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Document</th>
+              <th>तारीख</th>
+              <th>नोंद केले</th>
+              <th>Status</th>
+              <th>शेरा</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="javak-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SHARE -->
+    <div id="sec-share" class="section">
+      <div class="stats-row" style="margin-bottom:1.5rem">
+        <div class="stat-card">
+          <div class="stat-label">आजच्या Aavak</div>
+          <div class="stat-value green" id="share-today-a">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">आजच्या Javak</div>
+          <div class="stat-value red" id="share-today-j">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">एकूण Pending</div>
+          <div class="stat-value amber" id="share-pending">0</div>
+        </div>
+      </div>
+
+      <div class="share-card">
+        <div class="share-title">📋 WhatsApp / Group वर Share करा</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+          <select id="share-type" onchange="onShareTypeChange()" style="padding:7px 10px;border:0.5px solid var(--border-md);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:13px;outline:none">
+            <option value="today">आजचा Report</option>
+            <option value="range">तारीख Range निवडा</option>
+            <option value="all">सर्व नोंदी</option>
+            <option value="pending">Pending नोंदी</option>
+            <option value="aavak">फक्त Aavak</option>
+            <option value="javak">फक्त Javak</option>
+          </select>
+          <input type="date" id="share-from" onchange="generateReport()" style="display:none">
+          <span id="share-to-label" style="display:none;font-size:12px;color:var(--text2)">ते</span>
+          <input type="date" id="share-to" onchange="generateReport()" style="display:none">
+          <button class="btn-cancel" onclick="generateReport()">🔄 Update करा</button>
+        </div>
+        <div class="share-text" id="share-output">report येथे दिसेल...</div>
+        <div class="share-actions">
+          <button class="btn-share" onclick="shareWhatsApp()">💬 WhatsApp वर Share करा</button>
+          <button class="btn-copy" onclick="copyReport()">📋 Copy करा</button>
+          <button class="btn-copy" onclick="exportCSV()">📊 Excel (CSV) Export</button>
+          <button class="btn-copy" onclick="printReport()">🖨️ Print / PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER VIEW -->
+    <div id="sec-customer" class="section">
+      <div class="form-card">
+        <div class="form-card-title">👤 Customer नुसार सर्व नोंदी पहा</div>
+        <div class="field">
+          <label>Customer चे नाव टाका</label>
+          <input type="text" id="cust-search" placeholder="उदा. Ramesh Sharma" oninput="renderCustomerView()">
+        </div>
+      </div>
+      <div id="customer-results">
+        <div class="empty-state"><div class="empty-state-icon">👤</div><p>Customer चे नाव टाका — त्याच्या सर्व नोंदी (Aavak + Javak) इथे दिसतील</p></div>
+      </div>
+    </div>
+
+    <!-- HISTORY / AUDIT LOG -->
+    <div id="sec-history" class="section">
+      <div class="form-card-title" style="margin-bottom:1rem">🕒 बदल / Activity History</div>
+      <div class="activity-list" id="history-list">
+        <div class="empty-state"><div class="empty-state-icon">🕒</div><p>अजून कोणतीही activity नाही</p></div>
+      </div>
+    </div>
+
+    <!-- STAFF (ADMIN ONLY) -->
+    <div id="sec-staff" class="section">
+      <div class="form-card">
+        <div class="form-card-title">👥 नवीन Staff Login बनवा</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Staff चे नाव *</label>
+            <input type="text" id="s-name" placeholder="उदा. Rahul">
+          </div>
+          <div class="field">
+            <label>Username *</label>
+            <input type="text" id="s-username" placeholder="उदा. rahul">
+          </div>
+          <div class="field">
+            <label>Password *</label>
+            <input type="text" id="s-password" placeholder="उदा. rahul@123">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-add" onclick="addStaff()">➕ Staff Add करा</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>नाव</th>
+              <th>Username</th>
+              <th>Password</th>
+              <th>Role</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="staff-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- STAFF DELETE MODAL -->
+<div class="modal-overlay hidden" id="staff-del-modal">
+  <div class="modal">
+    <div class="modal-title">🗑️ Staff Login Delete करायचा का?</div>
+    <p style="font-size:13px;color:var(--text2)" id="staff-del-msg"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeStaffDelModal()">रद्द करा</button>
+      <button class="btn-danger" onclick="confirmStaffDelete()">Delete करा</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay hidden" id="del-modal">
+  <div class="modal">
+    <div class="modal-title">🗑️ नोंद Delete करायची का?</div>
+    <p style="font-size:13px;color:var(--text2)">ही नोंद कायमची delete होईल. पुन्हा येणार नाही.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDelModal()">रद्द करा</button>
+      <button class="btn-danger" onclick="confirmDelete()">Delete करा</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay hidden" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">✏️ नोंद Edit करा</div>
+    <div class="form-grid" style="margin-bottom:10px">
+      <div class="field">
+        <label>Customer चे नाव</label>
+        <input type="text" id="edit-customer">
+      </div>
+      <div class="field">
+        <label>Document</label>
+        <input type="text" id="edit-document">
+      </div>
+      <div class="field">
+        <label>तारीख</label>
+        <input type="date" id="edit-date">
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="edit-status">
+          <option value="Pending">Pending</option>
+          <option value="Done">Done</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Return तारीख (फक्त Javak साठी)</label>
+        <input type="date" id="edit-return">
+      </div>
+    </div>
+    <div class="field">
+      <label>शेरा</label>
+      <input type="text" id="edit-note">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">रद्द करा</button>
+      <button class="btn-add" onclick="saveEdit()">Save करा ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTORE MODAL -->
+<div class="modal-overlay hidden" id="restore-modal">
+  <div class="modal">
+    <div class="modal-title">⬆️ Backup Restore करायचा का?</div>
+    <p style="font-size:13px;color:var(--text2)" id="restore-msg"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeRestoreModal()">रद्द करा</button>
+      <button class="btn-danger" onclick="confirmRestore()">Restore करा</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+<div id="sync-banner" style="display:none;position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999;box-shadow:var(--shadow-lg)">⏳ Syncing...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============ SUPABASE CONFIG ============
+   खालच्या दोन ओळींमध्ये तुमच्या Supabase Project चा URL आणि anon key टाका.
+   Supabase Dashboard → Settings → API मध्ये हे मिळेल. */
+const SUPABASE_URL = 'https://zbeeanyhjuymzhxnmknp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpiZWVhbnloanV5bXpoeG5ta25wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MjE0MjgsImV4cCI6MjA5ODM5NzQyOH0.3AJ5V_qjrnFmOn6g2bgiQBBK7uHDBoLaK_hf-7lxpKY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* ========================================== */
+
+const DEFAULT_USERS = [
+  { id: 1, name: 'Admin', username: 'admin', password: 'admin123', role: 'admin' }
+];
+let users = [];
+let currentUser = '';
+let currentUserId = null;
+let currentRole = '';
+let records = [];
+let audit = [];
+let deleteTarget = null;
+let editTarget = null;
+let staffDeleteTarget = null;
+let isDark = false;
+
+function showSync(on) { document.getElementById('sync-banner').style.display = on ? 'block' : 'none'; }
+
+function mapRecordFromDb(r) {
+  return { id: r.id, type: r.type, customer: r.customer, documents: r.documents || [], date: r.date, status: r.status, note: r.note || '', expectedReturn: r.expected_return || '', by: r.by, createdAt: r.created_at };
+}
+function mapRecordToDb(r) {
+  return { id: r.id, type: r.type, customer: r.customer, documents: r.documents, date: r.date, status: r.status, note: r.note, expected_return: r.expectedReturn || null, by: r.by, created_at: r.createdAt };
+}
+function mapAuditFromDb(a) {
+  return { id: a.id, time: a.time, user: a.user_name, action: a.action, details: a.details };
+}
+
+async function initData() {
+  showSync(true);
+  const { data: uData, error: uErr } = await sb.from('aj_users').select('*').order('id');
+  if (uErr) { showToast('⚠️ Supabase कनेक्ट होत नाही! URL/Key तपासा.'); showSync(false); return; }
+  users = uData;
+  if (!users.length) {
+    await sb.from('aj_users').insert(DEFAULT_USERS);
+    users = [...DEFAULT_USERS];
+  }
+  const { data: rData } = await sb.from('aj_records').select('*').order('id', { ascending: false });
+  records = (rData || []).map(mapRecordFromDb);
+  const { data: aData } = await sb.from('aj_audit').select('*').order('id', { ascending: false }).limit(300);
+  audit = (aData || []).map(mapAuditFromDb);
+  showSync(false);
+  setupRealtime();
+}
+
+function setupRealtime() {
+  sb.channel('aj_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'aj_records' }, async () => {
+      const { data } = await sb.from('aj_records').select('*').order('id', { ascending: false });
+      records = (data || []).map(mapRecordFromDb);
+      if (document.getElementById('app').style.display !== 'none') { updateAll(); generateReport(); renderCustomerView(); }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'aj_users' }, async () => {
+      const { data } = await sb.from('aj_users').select('*').order('id');
+      users = data || [];
+      if (currentRole === 'admin') renderStaffTable();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'aj_audit' }, async () => {
+      const { data } = await sb.from('aj_audit').select('*').order('id', { ascending: false }).limit(300);
+      audit = (data || []).map(mapAuditFromDb);
+      renderHistory();
+    })
+    .subscribe();
+}
+
+initData();
+
+async function doLogin() {
+  const uname = document.getElementById('login-name').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-err');
+  if (!uname || !pass) { err.textContent = 'Username आणि Password भरा'; return; }
+  const user = users.find(u => u.username.toLowerCase() === uname && u.password === pass);
+  if (!user) { err.textContent = 'Username किंवा Password चुकीचे आहे!'; return; }
+  err.textContent = '';
+  currentUser = user.name;
+  currentUserId = user.id;
+  currentRole = user.role;
+  document.getElementById('user-display').textContent = user.name;
+  document.getElementById('user-avatar').textContent = user.name[0].toUpperCase();
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('staff-tab-btn').style.display = currentRole === 'admin' ? '' : 'none';
+  setTodayDates();
+  updateAll();
+  generateReport();
+  renderHistory();
+  if (currentRole === 'admin') renderStaffTable();
+}
+
+function doLogout() {
+  currentUser = '';
+  currentRole = '';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-name').value = '';
+}
+
+async function addStaff() {
+  const name = document.getElementById('s-name').value.trim();
+  const username = document.getElementById('s-username').value.trim();
+  const password = document.getElementById('s-password').value.trim();
+  if (!name || !username || !password) { showToast('⚠️ सर्व माहिती भरा!'); return; }
+  if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) { showToast('⚠️ हे Username आधीच आहे!'); return; }
+  const newUser = { id: Date.now(), name, username, password, role: 'staff' };
+  showSync(true);
+  const { error } = await sb.from('aj_users').insert(newUser);
+  showSync(false);
+  if (error) { showToast('⚠️ Save होऊ शकले नाही, परत प्रयत्न करा'); return; }
+  users.push(newUser);
+  document.getElementById('s-name').value = '';
+  document.getElementById('s-username').value = '';
+  document.getElementById('s-password').value = '';
+  renderStaffTable();
+  logAudit('👥 नवीन Staff Login बनवला', `${name} (${username})`);
+  showToast('✅ Staff Login बनवले!');
+}
+
+function renderStaffTable() {
+  const tbody = document.getElementById('staff-tbody');
+  tbody.innerHTML = users.map((u, i) => `
+    <tr>
+      <td style="color:var(--text3);font-size:12px">${i + 1}</td>
+      <td style="font-weight:500">${esc(u.name)}</td>
+      <td>${esc(u.username)}</td>
+      <td style="font-family:monospace">${esc(u.password)}</td>
+      <td><span class="badge ${u.role === 'admin' ? 'badge-done' : 'badge-pending'}">${u.role === 'admin' ? 'Admin' : 'Staff'}</span></td>
+      <td>${u.role === 'admin' ? '<span style="color:var(--text3);font-size:12px">—</span>' : `<button class="icon-btn del" onclick="openStaffDel(${u.id})" title="Delete">🗑️</button>`}</td>
+    </tr>
+  `).join('');
+}
+
+function openStaffDel(id) {
+  staffDeleteTarget = id;
+  const u = users.find(x => x.id === id);
+  document.getElementById('staff-del-msg').textContent = `"${u.name}" (${u.username}) चा login कायमचा delete होईल.`;
+  document.getElementById('staff-del-modal').classList.remove('hidden');
+}
+function closeStaffDelModal() { staffDeleteTarget = null; document.getElementById('staff-del-modal').classList.add('hidden'); }
+async function confirmStaffDelete() {
+  const u = users.find(x => x.id === staffDeleteTarget);
+  showSync(true);
+  const { error } = await sb.from('aj_users').delete().eq('id', staffDeleteTarget);
+  showSync(false);
+  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+  users = users.filter(u => u.id !== staffDeleteTarget);
+  closeStaffDelModal(); renderStaffTable();
+  if (u) logAudit('🗑️ Staff Login Delete केला', `${u.name} (${u.username})`);
+  showToast('🗑️ Staff Login Delete केला!');
+}
+
+function setTodayDates() {
+  const today = new Date().toISOString().split('T')[0];
+  ['a-date','j-date'].forEach(id => document.getElementById(id).value = today);
+}
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
+  document.querySelector('.theme-btn').textContent = isDark ? '☀️' : '🌙';
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  if (name === 'share') { generateReport(); updateShareStats(); }
+  if (name === 'customer') renderCustomerView();
+  if (name === 'history') renderHistory();
+}
+
+async function addEntry(type) {
+  const pre = type === 'aavak' ? 'a' : 'j';
+  const customer = document.getElementById(pre + '-customer').value.trim();
+  const docRaw = document.getElementById(pre + '-document').value.trim();
+  const date = document.getElementById(pre + '-date').value;
+  const status = document.getElementById(pre + '-status').value;
+  const note = document.getElementById(pre + '-note').value.trim();
+  const expectedReturn = type === 'javak' ? document.getElementById('j-return').value : '';
+  if (!customer || !docRaw) { showToast('⚠️ Customer आणि Document भरणे आवश्यक आहे!'); return; }
+  if (!date) { showToast('⚠️ तारीख निवडा!'); return; }
+  const documents = docRaw.split(',').map(d => d.trim()).filter(Boolean);
+  const entry = { id: Date.now(), type, customer, documents, date, status, note, expectedReturn, by: currentUser, createdAt: new Date().toISOString() };
+  showSync(true);
+  const { error } = await sb.from('aj_records').insert({
+    id: entry.id, type: entry.type, customer: entry.customer, documents: entry.documents,
+    date: entry.date, status: entry.status, note: entry.note,
+    expected_return: entry.expectedReturn || null, by: entry.by, created_at: entry.createdAt
+  });
+  showSync(false);
+  if (error) { showToast('⚠️ Save होऊ शकले नाही, परत प्रयत्न करा'); return; }
+  records.unshift(entry);
+  document.getElementById(pre + '-customer').value = '';
+  document.getElementById(pre + '-document').value = '';
+  document.getElementById(pre + '-note').value = '';
+  if (type === 'javak') document.getElementById('j-return').value = '';
+  playBeep();
+  logAudit(type === 'aavak' ? '📥 नवीन Aavak नोंद' : '📤 नवीन Javak नोंद', `${customer} — ${documents.join(', ')}`);
+  showToast('✅ नोंद यशस्वीरीत्या केली!');
+  updateAll();
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!list) return;
+  if (!audit.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🕒</div><p>अजून कोणतीही activity नाही</p></div>`;
+    return;
+  }
+  list.innerHTML = audit.slice(0, 100).map(a => {
+    const d = new Date(a.time);
+    const timeStr = formatDate(d.toISOString().split('T')[0]) + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    let dot = 'green';
+    if (a.action.includes('Delete')) dot = 'red';
+    return `
+    <div class="activity-item">
+      <div class="activity-dot ${dot}"></div>
+      <div class="activity-info">
+        <div class="activity-main">${esc(a.action)}</div>
+        <div class="activity-sub">${esc(a.details)} · by ${esc(a.user)}</div>
+      </div>
+      <div class="activity-time">${timeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+async function changePassword() {
+  const cur = document.getElementById('pw-current').value;
+  const nw = document.getElementById('pw-new').value;
+  const cnf = document.getElementById('pw-confirm').value;
+  if (!cur || !nw || !cnf) { showToast('⚠️ सर्व fields भरा!'); return; }
+  const user = users.find(u => u.id === currentUserId);
+  if (!user || user.password !== cur) { showToast('⚠️ सध्याचा Password चुकीचा आहे!'); return; }
+  if (nw !== cnf) { showToast('⚠️ नवीन Password जुळत नाही!'); return; }
+  if (nw.length < 4) { showToast('⚠️ Password किमान 4 अक्षरांचा असावा!'); return; }
+  showSync(true);
+  const { error } = await sb.from('aj_users').update({ password: nw }).eq('id', currentUserId);
+  showSync(false);
+  if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
+  user.password = nw;
+  document.getElementById('pw-current').value = '';
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  if (currentRole === 'admin') renderStaffTable();
+  showToast('✅ Password बदलला!');
+}
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.start(); osc.stop(ctx.currentTime + 0.25);
+  } catch (e) {}
+}
+
+function renderCustomerView() {
+  const q = document.getElementById('cust-search').value.trim().toLowerCase();
+  const box = document.getElementById('customer-results');
+  if (!q) {
+    box.innerHTML = `<div class="empty-state"><div class="empty-state-icon">👤</div><p>Customer चे नाव टाका — त्याच्या सर्व नोंदी (Aavak + Javak) इथे दिसतील</p></div>`;
+    return;
+  }
+  const matches = records.filter(r => r.customer.toLowerCase().includes(q))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (!matches.length) {
+    box.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><p>"${esc(q)}" साठी कोणतीही नोंद आढळली नाही</p></div>`;
+    return;
+  }
+  const aavakCount = matches.filter(r => r.type === 'aavak').length;
+  const javakCount = matches.filter(r => r.type === 'javak').length;
+  box.innerHTML = `
+    <div class="stats-row" style="margin-bottom:1rem">
+      <div class="stat-card"><div class="stat-label">एकूण नोंदी</div><div class="stat-value">${matches.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Aavak</div><div class="stat-value green">${aavakCount}</div></div>
+      <div class="stat-card"><div class="stat-label">Javak</div><div class="stat-value red">${javakCount}</div></div>
+    </div>
+    <div class="activity-list">
+      ${matches.map(r => `
+        <div class="activity-item">
+          <div class="activity-dot ${r.type === 'aavak' ? 'green' : 'red'}"></div>
+          <div class="activity-info">
+            <div class="activity-main">${r.type === 'aavak' ? '📥' : '📤'} ${esc(r.customer)} — ${esc((r.documents || []).join(', '))}</div>
+            <div class="activity-sub">
+              <span class="badge ${r.status === 'Done' ? 'badge-done' : 'badge-pending'}" style="font-size:10px;padding:1px 6px">${r.status}</span>
+              · ${esc(r.by)}${r.note ? ' · 💬 ' + esc(r.note) : ''}${r.expectedReturn ? ' · 🔁 Return: ' + formatDate(r.expectedReturn) : ''}
+            </div>
+          </div>
+          <div class="activity-time">${formatDate(r.date)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function updateAll() {
+  renderTable('aavak');
+  renderTable('javak');
+  updateStats();
+  updateDashboard();
+}
+
+function getFiltered(type) {
+  const pre = type === 'aavak' ? 'a' : 'j';
+  const search = (document.getElementById(pre + '-search')?.value || '').toLowerCase();
+  const filterStatus = document.getElementById(pre + '-filter-status')?.value || '';
+  const filterDate = document.getElementById(pre + '-filter-date')?.value || '';
+  return records.filter(r => {
+    if (r.type !== type) return false;
+    const matchSearch = !search || r.customer.toLowerCase().includes(search) || (r.documents || []).join(' ').toLowerCase().includes(search) || r.note.toLowerCase().includes(search);
+    const matchStatus = !filterStatus || r.status === filterStatus;
+    const matchDate = !filterDate || r.date === filterDate;
+    return matchSearch && matchStatus && matchDate;
+  });
+}
+
+function renderTable(type) {
+  const pre = type === 'aavak' ? 'a' : 'j';
+  const tbody = document.getElementById(type + '-tbody');
+  const filtered = getFiltered(type);
+  const label = document.getElementById(pre + '-count-label');
+  if (label) label.textContent = filtered.length + ' नोंदी';
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">📭</div><p>कोणतीही नोंद आढळली नाही</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map((r, i) => `
+    <tr>
+      <td style="color:var(--text3);font-size:12px">${i + 1}</td>
+      <td style="font-weight:500">${esc(r.customer)}</td>
+      <td>${(r.documents || []).map(d => `<span class="badge" style="background:var(--surface2);color:var(--text2);margin:1px">${esc(d)}</span>`).join(' ')}</td>
+      <td style="color:var(--text2)">${formatDate(r.date)}${r.expectedReturn ? `<div style="font-size:11px;margin-top:3px"><span class="badge ${isOverdue(r) ? 'badge-pending' : ''}" style="background:var(--accent-bg);color:var(--accent-text)">🔁 ${formatDate(r.expectedReturn)}</span></div>` : ''}</td>
+      <td style="color:var(--text3);font-size:12px">${esc(r.by)}</td>
+      <td><span class="badge ${r.status === 'Done' ? 'badge-done' : 'badge-pending'}">${r.status}</span></td>
+      <td style="color:var(--text2);font-size:12px">${esc(r.note) || '—'}</td>
+      <td style="display:flex;gap:5px">
+        <button class="icon-btn" onclick="openEdit(${r.id})" title="Edit">✏️</button>
+        <button class="icon-btn del" onclick="openDel(${r.id})" title="Delete">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function isOverdue(r) {
+  if (!r.expectedReturn || r.status === 'Done') return false;
+  const today = new Date().toISOString().split('T')[0];
+  return r.expectedReturn < today;
+}
+
+function updateStats() {
+  const today = new Date().toISOString().split('T')[0];
+  const aavak = records.filter(r => r.type === 'aavak');
+  const javak = records.filter(r => r.type === 'javak');
+  const pending = records.filter(r => r.status === 'Pending');
+  const todayRecs = records.filter(r => r.date === today);
+  document.getElementById('stat-aavak').textContent = aavak.length;
+  document.getElementById('stat-javak').textContent = javak.length;
+  document.getElementById('stat-pending').textContent = pending.length;
+  document.getElementById('stat-today').textContent = todayRecs.length;
+  document.getElementById('aavak-count').textContent = aavak.length;
+  document.getElementById('javak-count').textContent = javak.length;
+}
+
+function updateDashboard() {
+  const list = document.getElementById('recent-list');
+  const recent = records.slice(0, 10);
+  if (!recent.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📂</div><p>अजून कोणतीही नोंद नाही</p></div>`;
+  } else {
+    list.innerHTML = recent.map(r => `
+      <div class="activity-item">
+        <div class="activity-dot ${r.type === 'aavak' ? 'green' : 'red'}"></div>
+        <div class="activity-info">
+          <div class="activity-main">${esc(r.customer)} — ${esc((r.documents || []).join(', '))}</div>
+          <div class="activity-sub">${r.type === 'aavak' ? '📥 Aavak' : '📤 Javak'} · ${esc(r.by)} · <span class="badge ${r.status === 'Done' ? 'badge-done' : 'badge-pending'}" style="font-size:10px;padding:1px 6px">${r.status}</span></div>
+        </div>
+        <div class="activity-time">${formatDate(r.date)}</div>
+      </div>
+    `).join('');
+  }
+
+  const overdueBox = document.getElementById('overdue-section');
+  const overdue = records.filter(r => isOverdue(r));
+  if (!overdue.length) { overdueBox.innerHTML = ''; return; }
+  overdueBox.innerHTML = `
+    <div class="recent-title" style="color:var(--red)">⚠️ Return Pending (Overdue) — ${overdue.length}</div>
+    <div class="activity-list" style="margin-bottom:1.5rem">
+      ${overdue.map(r => `
+        <div class="activity-item" style="border-color:var(--red)">
+          <div class="activity-dot red"></div>
+          <div class="activity-info">
+            <div class="activity-main">${esc(r.customer)} — ${esc((r.documents || []).join(', '))}</div>
+            <div class="activity-sub">Return तारीख: ${formatDate(r.expectedReturn)} (उलटली) · ${esc(r.by)}</div>
+          </div>
+          <span class="badge badge-pending">Overdue</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function updateShareStats() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('share-today-a').textContent = records.filter(r => r.type === 'aavak' && r.date === today).length;
+  document.getElementById('share-today-j').textContent = records.filter(r => r.type === 'javak' && r.date === today).length;
+  document.getElementById('share-pending').textContent = records.filter(r => r.status === 'Pending').length;
+}
+
+function onShareTypeChange() {
+  const type = document.getElementById('share-type').value;
+  const showRange = type === 'range';
+  document.getElementById('share-from').style.display = showRange ? '' : 'none';
+  document.getElementById('share-to-label').style.display = showRange ? '' : 'none';
+  document.getElementById('share-to').style.display = showRange ? '' : 'none';
+  if (showRange) {
+    const today = new Date().toISOString().split('T')[0];
+    if (!document.getElementById('share-from').value) document.getElementById('share-from').value = today;
+    if (!document.getElementById('share-to').value) document.getElementById('share-to').value = today;
+  }
+  generateReport();
+}
+
+function getReportRecords() {
+  const type = document.getElementById('share-type')?.value || 'today';
+  const today = new Date().toISOString().split('T')[0];
+  let filtered = records;
+  let title = '';
+  if (type === 'today') { filtered = records.filter(r => r.date === today); title = `📅 आजचा Report (${formatDate(today)})`; }
+  else if (type === 'range') {
+    const from = document.getElementById('share-from').value || today;
+    const to = document.getElementById('share-to').value || today;
+    filtered = records.filter(r => r.date >= from && r.date <= to);
+    title = `📅 Report: ${formatDate(from)} ते ${formatDate(to)}`;
+  }
+  else if (type === 'all') { title = '📋 सर्व नोंदी'; }
+  else if (type === 'pending') { filtered = records.filter(r => r.status === 'Pending'); title = '⏳ Pending नोंदी'; }
+  else if (type === 'aavak') { filtered = records.filter(r => r.type === 'aavak'); title = '📥 Aavak नोंदी'; }
+  else if (type === 'javak') { filtered = records.filter(r => r.type === 'javak'); title = '📤 Javak नोंदी'; }
+  return { filtered, title };
+}
+
+function generateReport() {
+  const { filtered, title } = getReportRecords();
+  const aavakList = filtered.filter(r => r.type === 'aavak');
+  const javakList = filtered.filter(r => r.type === 'javak');
+
+  let text = `🏢 AAVAK JAVAK OFFICE RECORDS\n${title}\n${'─'.repeat(35)}\n\n`;
+  if (aavakList.length) {
+    text += `📥 AAVAK (${aavakList.length})\n`;
+    aavakList.forEach((r, i) => {
+      text += `${i + 1}. ${r.customer}\n   📄 ${(r.documents || []).join(', ')}\n   📅 ${formatDate(r.date)} · ${r.status} · ${r.by}\n${r.note ? '   💬 ' + r.note + '\n' : ''}`;
+    });
+    text += '\n';
+  }
+  if (javakList.length) {
+    text += `📤 JAVAK (${javakList.length})\n`;
+    javakList.forEach((r, i) => {
+      text += `${i + 1}. ${r.customer}\n   📄 ${(r.documents || []).join(', ')}\n   📅 ${formatDate(r.date)} · ${r.status} · ${r.by}${r.expectedReturn ? '\n   🔁 Return: ' + formatDate(r.expectedReturn) : ''}\n${r.note ? '   💬 ' + r.note + '\n' : ''}`;
+    });
+    text += '\n';
+  }
+  if (!filtered.length) { text += 'कोणतीही नोंद नाही.\n'; }
+  text += `${'─'.repeat(35)}\nएकूण: ${filtered.length} नोंदी`;
+  document.getElementById('share-output').textContent = text;
+  updateShareStats();
+}
+
+function exportCSV() {
+  const { filtered, title } = getReportRecords();
+  if (!filtered.length) { showToast('⚠️ या Report मध्ये कोणतीही नोंद नाही!'); return; }
+  let csv = 'Type,Customer,Documents,Date,Status,Return Date,Note,Entered By\n';
+  filtered.forEach(r => {
+    const row = [
+      r.type === 'aavak' ? 'Aavak' : 'Javak',
+      r.customer,
+      (r.documents || []).join('; '),
+      r.date,
+      r.status,
+      r.expectedReturn || '',
+      r.note || '',
+      r.by
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+    csv += row + '\n';
+  });
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `aavak-javak-report-${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📊 CSV Export झाला!');
+}
+
+function printReport() {
+  const { filtered, title } = getReportRecords();
+  let rows = filtered.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r.type === 'aavak' ? 'Aavak' : 'Javak'}</td>
+      <td>${esc(r.customer)}</td>
+      <td>${esc((r.documents || []).join(', '))}</td>
+      <td>${formatDate(r.date)}</td>
+      <td>${r.status}</td>
+      <td>${r.expectedReturn ? formatDate(r.expectedReturn) : '-'}</td>
+      <td>${esc(r.note) || '-'}</td>
+      <td>${esc(r.by)}</td>
+    </tr>`).join('');
+  if (!filtered.length) rows = `<tr><td colspan="9" style="text-align:center">कोणतीही नोंद नाही</td></tr>`;
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html><head><title>Aavak Javak Report</title>
+    <style>
+      body{font-family:sans-serif;padding:20px;color:#1a1a18}
+      h1{font-size:18px;margin-bottom:4px}
+      h2{font-size:13px;color:#555;margin-bottom:16px;font-weight:normal}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+      th{background:#f1efe8}
+    </style></head><body>
+    <h1>🏢 Aavak Javak Office Records</h1>
+    <h2>${title} — एकूण ${filtered.length} नोंदी — Print date: ${formatDate(new Date().toISOString().split('T')[0])}</h2>
+    <table><thead><tr><th>#</th><th>Type</th><th>Customer</th><th>Documents</th><th>Date</th><th>Status</th><th>Return</th><th>Note</th><th>By</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <script>window.onload=()=>window.print()<\/script>
+    </body></html>
+  `);
+  win.document.close();
+}
+
+function shareWhatsApp() {
+  const text = document.getElementById('share-output').textContent;
+  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+function copyReport() {
+  const text = document.getElementById('share-output').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('📋 Copied! आता Group मध्ये Paste करा'));
+}
+
+function onGlobalSearch(val) {
+  val = val.toLowerCase();
+  document.getElementById('a-search').value = val;
+  document.getElementById('j-search').value = val;
+  renderTable('aavak');
+  renderTable('javak');
+  if (val) {
+    const hasAavak = getFiltered('aavak').length > 0;
+    const hasJavak = getFiltered('javak').length > 0;
+    if (hasAavak && !hasJavak) switchTab('aavak', document.querySelectorAll('.tab')[1]);
+    else if (hasJavak && !hasAavak) switchTab('javak', document.querySelectorAll('.tab')[2]);
+  }
+}
+
+function openDel(id) { deleteTarget = id; document.getElementById('del-modal').classList.remove('hidden'); }
+function closeDelModal() { deleteTarget = null; document.getElementById('del-modal').classList.add('hidden'); }
+async function confirmDelete() {
+  const r = records.find(x => x.id === deleteTarget);
+  showSync(true);
+  const { error } = await sb.from('aj_records').delete().eq('id', deleteTarget);
+  showSync(false);
+  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+  records = records.filter(r => r.id !== deleteTarget);
+  closeDelModal(); updateAll();
+  if (r) logAudit('🗑️ नोंद Delete केली', `${r.customer} — ${(r.documents || []).join(', ')}`);
+  showToast('🗑️ नोंद Delete केली!');
+}
+
+function openEdit(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  editTarget = id;
+  document.getElementById('edit-customer').value = r.customer;
+  document.getElementById('edit-document').value = (r.documents || []).join(', ');
+  document.getElementById('edit-date').value = r.date;
+  document.getElementById('edit-status').value = r.status;
+  document.getElementById('edit-note').value = r.note;
+  document.getElementById('edit-return').value = r.expectedReturn || '';
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+function closeEditModal() { editTarget = null; document.getElementById('edit-modal').classList.add('hidden'); }
+async function saveEdit() {
+  const r = records.find(x => x.id === editTarget);
+  if (!r) return;
+  const customer = document.getElementById('edit-customer').value.trim();
+  const documents = document.getElementById('edit-document').value.trim().split(',').map(d => d.trim()).filter(Boolean);
+  const date = document.getElementById('edit-date').value;
+  const status = document.getElementById('edit-status').value;
+  const note = document.getElementById('edit-note').value.trim();
+  const expectedReturn = document.getElementById('edit-return').value;
+  showSync(true);
+  const { error } = await sb.from('aj_records').update({
+    customer, documents, date, status, note, expected_return: expectedReturn || null
+  }).eq('id', editTarget);
+  showSync(false);
+  if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
+  r.customer = customer; r.documents = documents; r.date = date; r.status = status; r.note = note; r.expectedReturn = expectedReturn;
+  closeEditModal(); updateAll();
+  logAudit('✏️ नोंद Update केली', `${r.customer} — ${r.documents.join(', ')}`);
+  showToast('✅ नोंद Update केली!');
+}
+
+function downloadBackup() {
+  const backup = {
+    app: 'Aavak Javak Office Records',
+    exportedAt: new Date().toISOString(),
+    records: records,
+    users: users,
+    audit: audit
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = `aavak-javak-backup-${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('⬇️ Backup Download झाला!');
+}
+
+let pendingRestore = null;
+function restoreBackup(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data.records) || !Array.isArray(data.users)) {
+        showToast('⚠️ ही file योग्य Backup file नाही!');
+        return;
+      }
+      pendingRestore = data;
+      document.getElementById('restore-msg').textContent =
+        `या file मध्ये ${data.records.length} नोंदी आणि ${data.users.length} login आहेत. सध्याचा सगळा data बदलला जाईल.`;
+      document.getElementById('restore-modal').classList.remove('hidden');
+    } catch (err) {
+      showToast('⚠️ File वाचता आली नाही!');
+    }
+    document.getElementById('restore-file').value = '';
+  };
+  reader.readAsText(file);
+}
+function closeRestoreModal() { pendingRestore = null; document.getElementById('restore-modal').classList.add('hidden'); }
+async function confirmRestore() {
+  if (!pendingRestore) return;
+  showSync(true);
+  try {
+    await sb.from('aj_records').delete().gte('id', 0);
+    await sb.from('aj_users').delete().gte('id', 0);
+    await sb.from('aj_audit').delete().gte('id', 0);
+    if (pendingRestore.records.length) await sb.from('aj_records').insert(pendingRestore.records.map(mapRecordToDb));
+    if (pendingRestore.users.length) await sb.from('aj_users').insert(pendingRestore.users);
+    if ((pendingRestore.audit || []).length) await sb.from('aj_audit').insert(pendingRestore.audit.map(a => ({ time: a.time, user_name: a.user, action: a.action, details: a.details })));
+  } catch (err) {
+    showSync(false);
+    showToast('⚠️ Restore अयशस्वी झाला!');
+    return;
+  }
+  records = pendingRestore.records;
+  users = pendingRestore.users;
+  audit = pendingRestore.audit || [];
+  showSync(false);
+  closeRestoreModal();
+  updateAll();
+  generateReport();
+  renderHistory();
+  if (currentRole === 'admin') renderStaffTable();
+  showToast('✅ Backup Restore झाला!');
+}
+
+async function logAudit(action, details) {
+  const entry = { time: new Date().toISOString(), user_name: currentUser, action, details };
+  audit.unshift({ time: entry.time, user: currentUser, action, details });
+  if (audit.length > 300) audit = audit.slice(0, 300);
+  renderHistory();
+  await sb.from('aj_audit').insert(entry);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
