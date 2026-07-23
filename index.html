@@ -442,6 +442,10 @@
   .empty-state-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.4; }
   .empty-state p { font-size: 14px; }
 
+  /* ── CUSTOMER FOLLOW-UP TRACKER ── */
+  .chk-cell { text-align: center; }
+  .chk-cell input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+
   /* ── SHARE PANEL ── */
   .share-card {
     background: var(--surface);
@@ -878,6 +882,45 @@
       <div id="customer-results">
         <div class="empty-state"><div class="empty-state-icon">👤</div><p>Customer चे नाव टाका — त्याच्या सर्व नोंदी (Aavak + Javak) इथे दिसतील</p></div>
       </div>
+
+      <!-- CUSTOMER FOLLOW-UP TRACKER -->
+      <div class="form-card" style="margin-top:1.5rem">
+        <div class="form-card-title">✅ Customer Follow-up Tracker</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>नवीन Customer चे नाव</label>
+            <input type="text" id="cf-new-name" placeholder="उदा. Ramesh Sharma" onkeydown="if(event.key==='Enter')addCustomerManual()">
+          </div>
+        </div>
+        <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
+          <button class="btn-add" onclick="addCustomerManual()">➕ Customer Add करा</button>
+          <button class="btn-cancel" onclick="document.getElementById('cf-import-file').click()">⬆️ Excel/CSV मधून Import करा</button>
+          <input type="file" id="cf-import-file" accept=".csv" style="display:none" onchange="importCustomersCSV(this.files[0])">
+          <button class="btn-cancel" onclick="exportCustomersCSV()">⬇️ Excel (CSV) Export करा</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="cf-search" placeholder="Follow-up यादीत Customer शोधा..." oninput="renderCustomerFollowupTable()" style="min-width:220px">
+        <span class="filter-count" id="cf-count"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer चे नाव</th>
+              <th>Return Upload Done</th>
+              <th>Print Done</th>
+              <th>Payment Done</th>
+              <th>Print Issue to Customer</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="cf-tbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- HISTORY / AUDIT LOG -->
@@ -1028,6 +1071,7 @@ let currentUserId = null;
 let currentRole = '';
 let records = [];
 let audit = [];
+let customers = [];
 let deleteTarget = null;
 let editTarget = null;
 let staffDeleteTarget = null;
@@ -1044,6 +1088,9 @@ function mapRecordToDb(r) {
 function mapAuditFromDb(a) {
   return { id: a.id, time: a.time, user: a.user_name, action: a.action, details: a.details };
 }
+function mapCustomerFromDb(c) {
+  return { id: c.id, name: c.name, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+}
 
 async function initData() {
   showSync(true);
@@ -1058,6 +1105,8 @@ async function initData() {
   records = (rData || []).map(mapRecordFromDb);
   const { data: aData } = await sb.from('aj_audit').select('*').order('id', { ascending: false }).limit(300);
   audit = (aData || []).map(mapAuditFromDb);
+  const { data: cData } = await sb.from('aj_customers').select('*').order('id', { ascending: false });
+  customers = (cData || []).map(mapCustomerFromDb);
   showSync(false);
   setupRealtime();
 }
@@ -1078,6 +1127,11 @@ function setupRealtime() {
       const { data } = await sb.from('aj_audit').select('*').order('id', { ascending: false }).limit(300);
       audit = (data || []).map(mapAuditFromDb);
       renderHistory();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'aj_customers' }, async () => {
+      const { data } = await sb.from('aj_customers').select('*').order('id', { ascending: false });
+      customers = (data || []).map(mapCustomerFromDb);
+      renderCustomerFollowupTable();
     })
     .subscribe();
 }
@@ -1186,7 +1240,7 @@ function switchTab(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
   if (name === 'share') { generateReport(); updateShareStats(); }
-  if (name === 'customer') renderCustomerView();
+  if (name === 'customer') { renderCustomerView(); renderCustomerFollowupTable(); }
   if (name === 'history') renderHistory();
 }
 
@@ -1579,6 +1633,129 @@ function onGlobalSearch(val) {
     if (hasAavak && !hasJavak) switchTab('aavak', document.querySelectorAll('.tab')[1]);
     else if (hasJavak && !hasAavak) switchTab('javak', document.querySelectorAll('.tab')[2]);
   }
+}
+
+function renderCustomerFollowupTable() {
+  const tbody = document.getElementById('cf-tbody');
+  const countEl = document.getElementById('cf-count');
+  if (!tbody) return;
+  const searchEl = document.getElementById('cf-search');
+  const q = (searchEl ? searchEl.value : '').toLowerCase();
+  const list = customers.filter(c => !q || c.name.toLowerCase().includes(q));
+  if (countEl) countEl.textContent = `${list.length} Customers`;
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">👤</div><p>अजून कोणताही Customer Follow-up यादीत Add केलेला नाही</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((c, i) => `
+    <tr>
+      <td style="color:var(--text3);font-size:12px">${i + 1}</td>
+      <td style="font-weight:500">${esc(c.name)}</td>
+      <td class="chk-cell"><input type="checkbox" ${c.returnUploadDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.printDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'printDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.paymentDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'paymentDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.printIssueDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'printIssueDone', this.checked)"></td>
+      <td><button class="icon-btn del" onclick="deleteCustomerFollowup(${c.id})" title="Delete">🗑️</button></td>
+    </tr>
+  `).join('');
+}
+
+async function addCustomerManual() {
+  const input = document.getElementById('cf-new-name');
+  const name = input.value.trim();
+  if (!name) { showToast('⚠️ Customer चे नाव टाका!'); return; }
+  if (customers.some(c => c.name.toLowerCase() === name.toLowerCase())) { showToast('⚠️ हा Customer आधीच यादीत आहे!'); return; }
+  const entry = { id: Date.now(), name, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
+  showSync(true);
+  const { error } = await sb.from('aj_customers').insert({
+    id: entry.id, name: entry.name, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
+  });
+  showSync(false);
+  if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
+  customers.unshift(entry);
+  input.value = '';
+  renderCustomerFollowupTable();
+  logAudit('👤 नवीन Customer Follow-up मध्ये Add केला', name);
+  showToast('✅ Customer Add झाला!');
+}
+
+async function toggleCustomerFlag(id, field, value) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  const dbFieldMap = { returnUploadDone: 'return_upload_done', printDone: 'print_done', paymentDone: 'payment_done', printIssueDone: 'print_issue_done' };
+  const labelMap = { returnUploadDone: 'Return Upload Done', printDone: 'Print Done', paymentDone: 'Payment Done', printIssueDone: 'Print Issue to Customer' };
+  const prevValue = c[field];
+  c[field] = value;
+  showSync(true);
+  const { error } = await sb.from('aj_customers').update({ [dbFieldMap[field]]: value }).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Update होऊ शकले नाही'); c[field] = prevValue; renderCustomerFollowupTable(); return; }
+  logAudit(`✅ ${c.name} — ${labelMap[field]}`, value ? 'पूर्ण झाले ✔️' : 'पूर्ण नाही ✖️');
+  showToast('✅ Update झाले!');
+}
+
+async function deleteCustomerFollowup(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`"${c.name}" ला Follow-up यादीतून Delete करायचे का?`)) return;
+  showSync(true);
+  const { error } = await sb.from('aj_customers').delete().eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+  customers = customers.filter(x => x.id !== id);
+  renderCustomerFollowupTable();
+  logAudit('🗑️ Customer Follow-up मधून Delete केला', c.name);
+  showToast('🗑️ Customer Delete झाला!');
+}
+
+async function importCustomersCSV(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const text = e.target.result;
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { showToast('⚠️ File रिकामी आहे!'); document.getElementById('cf-import-file').value = ''; return; }
+    let startIdx = 0;
+    const firstCell = lines[0].split(',')[0].trim().toLowerCase().replace(/"/g, '');
+    if (firstCell === 'name' || firstCell.includes('customer')) startIdx = 1;
+    const rawNames = lines.slice(startIdx).map(l => l.split(',')[0].trim().replace(/^"|"$/g, '')).filter(Boolean);
+    const existingLower = new Set(customers.map(c => c.name.toLowerCase()));
+    const newOnes = [];
+    rawNames.forEach(name => {
+      const lower = name.toLowerCase();
+      if (!existingLower.has(lower)) { existingLower.add(lower); newOnes.push(name); }
+    });
+    if (!newOnes.length) { showToast('⚠️ Import करण्यासाठी नवीन Customer सापडले नाहीत!'); document.getElementById('cf-import-file').value = ''; return; }
+    const rows = newOnes.map((name, i) => ({
+      id: Date.now() + i, name, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
+    }));
+    showSync(true);
+    const { error } = await sb.from('aj_customers').insert(rows);
+    showSync(false);
+    document.getElementById('cf-import-file').value = '';
+    if (error) { showToast('⚠️ Import होऊ शकले नाही'); return; }
+    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
+    renderCustomerFollowupTable();
+    logAudit('⬆️ Excel मधून Customers Import केले', `${newOnes.length} नवीन Customers`);
+    showToast(`✅ ${newOnes.length} Customers Import झाले!`);
+  };
+  reader.readAsText(file);
+}
+
+function exportCustomersCSV() {
+  const header = ['Customer Name', 'Return Upload Done', 'Print Done', 'Payment Done', 'Print Issue to Customer'];
+  const rows = customers.map(c => [c.name, c.returnUploadDone ? 'Yes' : 'No', c.printDone ? 'Yes' : 'No', c.paymentDone ? 'Yes' : 'No', c.printIssueDone ? 'Yes' : 'No']);
+  const csv = header.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `customer-followup-${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📊 Customer List Export झाली!');
 }
 
 function openDel(id) { deleteTarget = id; document.getElementById('del-modal').classList.remove('hidden'); }
