@@ -911,6 +911,8 @@
             <tr>
               <th>#</th>
               <th>Customer चे नाव</th>
+              <th>Setup Done</th>
+              <th>Checking Done</th>
               <th>Return Upload Done</th>
               <th>Print Done</th>
               <th>Payment Done</th>
@@ -1089,7 +1091,7 @@ function mapAuditFromDb(a) {
   return { id: a.id, time: a.time, user: a.user_name, action: a.action, details: a.details };
 }
 function mapCustomerFromDb(c) {
-  return { id: c.id, name: c.name, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+  return { id: c.id, name: c.name, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
 }
 
 async function initData() {
@@ -1644,13 +1646,15 @@ function renderCustomerFollowupTable() {
   const list = customers.filter(c => !q || c.name.toLowerCase().includes(q));
   if (countEl) countEl.textContent = `${list.length} Customers`;
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">👤</div><p>अजून कोणताही Customer Follow-up यादीत Add केलेला नाही</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-state-icon">👤</div><p>अजून कोणताही Customer Follow-up यादीत Add केलेला नाही</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = list.map((c, i) => `
     <tr>
       <td style="color:var(--text3);font-size:12px">${i + 1}</td>
       <td style="font-weight:500">${esc(c.name)}</td>
+      <td class="chk-cell"><input type="checkbox" ${c.setupDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'setupDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.checkingDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'checkingDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.returnUploadDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.printDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'printDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.paymentDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'paymentDone', this.checked)"></td>
@@ -1665,10 +1669,10 @@ async function addCustomerManual() {
   const name = input.value.trim();
   if (!name) { showToast('⚠️ Customer चे नाव टाका!'); return; }
   if (customers.some(c => c.name.toLowerCase() === name.toLowerCase())) { showToast('⚠️ हा Customer आधीच यादीत आहे!'); return; }
-  const entry = { id: Date.now(), name, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
+  const entry = { id: Date.now(), name, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
   showSync(true);
   const { error } = await sb.from('aj_customers').insert({
-    id: entry.id, name: entry.name, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
+    id: entry.id, name: entry.name, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
   });
   showSync(false);
   if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
@@ -1682,8 +1686,8 @@ async function addCustomerManual() {
 async function toggleCustomerFlag(id, field, value) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
-  const dbFieldMap = { returnUploadDone: 'return_upload_done', printDone: 'print_done', paymentDone: 'payment_done', printIssueDone: 'print_issue_done' };
-  const labelMap = { returnUploadDone: 'Return Upload Done', printDone: 'Print Done', paymentDone: 'Payment Done', printIssueDone: 'Print Issue to Customer' };
+  const dbFieldMap = { setupDone: 'setup_done', checkingDone: 'checking_done', returnUploadDone: 'return_upload_done', printDone: 'print_done', paymentDone: 'payment_done', printIssueDone: 'print_issue_done' };
+  const labelMap = { setupDone: 'Setup Done', checkingDone: 'Checking Done', returnUploadDone: 'Return Upload Done', printDone: 'Print Done', paymentDone: 'Payment Done', printIssueDone: 'Print Issue to Customer' };
   const prevValue = c[field];
   c[field] = value;
   showSync(true);
@@ -1727,14 +1731,14 @@ async function importCustomersCSV(file) {
     });
     if (!newOnes.length) { showToast('⚠️ Import करण्यासाठी नवीन Customer सापडले नाहीत!'); document.getElementById('cf-import-file').value = ''; return; }
     const rows = newOnes.map((name, i) => ({
-      id: Date.now() + i, name, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
+      id: Date.now() + i, name, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
     }));
     showSync(true);
     const { error } = await sb.from('aj_customers').insert(rows);
     showSync(false);
     document.getElementById('cf-import-file').value = '';
     if (error) { showToast('⚠️ Import होऊ शकले नाही'); return; }
-    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
+    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
     renderCustomerFollowupTable();
     logAudit('⬆️ Excel मधून Customers Import केले', `${newOnes.length} नवीन Customers`);
     showToast(`✅ ${newOnes.length} Customers Import झाले!`);
@@ -1743,8 +1747,8 @@ async function importCustomersCSV(file) {
 }
 
 function exportCustomersCSV() {
-  const header = ['Customer Name', 'Return Upload Done', 'Print Done', 'Payment Done', 'Print Issue to Customer'];
-  const rows = customers.map(c => [c.name, c.returnUploadDone ? 'Yes' : 'No', c.printDone ? 'Yes' : 'No', c.paymentDone ? 'Yes' : 'No', c.printIssueDone ? 'Yes' : 'No']);
+  const header = ['Customer Name', 'Setup Done', 'Checking Done', 'Return Upload Done', 'Print Done', 'Payment Done', 'Print Issue to Customer'];
+  const rows = customers.map(c => [c.name, c.setupDone ? 'Yes' : 'No', c.checkingDone ? 'Yes' : 'No', c.returnUploadDone ? 'Yes' : 'No', c.printDone ? 'Yes' : 'No', c.paymentDone ? 'Yes' : 'No', c.printIssueDone ? 'Yes' : 'No']);
   const csv = header.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
