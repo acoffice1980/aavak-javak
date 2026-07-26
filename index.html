@@ -635,6 +635,8 @@
     <button class="tab" onclick="switchTab('aavak',this)">📥 Aavak <span class="tab-badge" id="aavak-count">0</span></button>
     <button class="tab" onclick="switchTab('javak',this)">📤 Javak <span class="tab-badge" id="javak-count">0</span></button>
     <button class="tab" onclick="switchTab('customer',this)">👤 Customer</button>
+    <button class="tab" onclick="switchTab('followup',this)">✅ Follow-up</button>
+    <button class="tab" onclick="switchTab('whatsapp',this)">📲 WhatsApp</button>
     <button class="tab" onclick="switchTab('history',this)">🕒 History</button>
     <button class="tab" onclick="switchTab('share',this)">📋 Share / Report</button>
     <button class="tab" id="staff-tab-btn" onclick="switchTab('staff',this)" style="display:none">👥 Staff Login</button>
@@ -889,9 +891,11 @@
       <div id="customer-results">
         <div class="empty-state"><div class="empty-state-icon">👤</div><p>Customer चे नाव टाका — त्याच्या सर्व नोंदी (Aavak + Javak) इथे दिसतील</p></div>
       </div>
+    </div>
 
-      <!-- CUSTOMER FOLLOW-UP TRACKER -->
-      <div class="form-card" style="margin-top:1.5rem">
+    <!-- CUSTOMER FOLLOW-UP TRACKER (SEPARATE SECTION) -->
+    <div id="sec-followup" class="section">
+      <div class="form-card">
         <div class="form-card-title">✅ Customer Follow-up Tracker</div>
         <div class="form-grid">
           <div class="field">
@@ -952,10 +956,17 @@
         <span class="filter-count" id="cf-count"></span>
       </div>
 
+      <div class="filter-bar" id="cf-bulk-bar" style="display:none;background:var(--red-bg)">
+        <span id="cf-selected-count" style="font-weight:600;color:var(--red-text)"></span>
+        <button class="btn-cancel" style="background:var(--red-text);color:#fff;border:none" onclick="deleteSelectedCustomers()">🗑️ Selected Customers Delete करा</button>
+        <button class="btn-cancel" onclick="clearCustomerSelection()">✖ Selection रद्द करा</button>
+      </div>
+
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
+              <th style="text-align:center"><input type="checkbox" id="cf-select-all" onchange="toggleSelectAllCustomers(this.checked)"></th>
               <th>#</th>
               <th>Customer चे नाव</th>
               <th>Mobile</th>
@@ -972,9 +983,11 @@
           <tbody id="cf-tbody"></tbody>
         </table>
       </div>
+    </div>
 
-      <!-- WHATSAPP FOLLOW-UP SECTION (SEPARATE) -->
-      <div class="form-card" style="margin-top:1.5rem">
+    <!-- WHATSAPP FOLLOW-UP (SEPARATE SECTION) -->
+    <div id="sec-whatsapp" class="section">
+      <div class="form-card">
         <div class="form-card-title">📲 WhatsApp Follow-up</div>
         <div class="form-grid">
           <div class="field" style="grid-column:1/-1">
@@ -985,12 +998,12 @@
         <div class="form-actions" style="justify-content:flex-start">
           <button class="btn-add" onclick="saveWaTemplate()">💾 Message Save करा</button>
         </div>
-        <div class="filter-bar" style="margin-top:1rem">
-          <input type="text" id="cf-wa-search" placeholder="WhatsApp पाठवण्यासाठी Customer शोधा..." oninput="renderWaList()" style="min-width:200px">
-          <span class="filter-count" id="cf-wa-count"></span>
-        </div>
-        <div id="cf-wa-list"></div>
       </div>
+      <div class="filter-bar">
+        <input type="text" id="cf-wa-search" placeholder="WhatsApp पाठवण्यासाठी Customer शोधा..." oninput="renderWaList()" style="min-width:200px">
+        <span class="filter-count" id="cf-wa-count"></span>
+      </div>
+      <div id="cf-wa-list"></div>
     </div>
 
     <!-- HISTORY / AUDIT LOG -->
@@ -1142,6 +1155,7 @@ let currentRole = '';
 let records = [];
 let audit = [];
 let customers = [];
+let selectedCustomerIds = new Set();
 let deleteTarget = null;
 let editTarget = null;
 let staffDeleteTarget = null;
@@ -1313,7 +1327,9 @@ function switchTab(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
   if (name === 'share') { generateReport(); updateShareStats(); }
-  if (name === 'customer') { renderCustomerView(); renderCustomerFollowupTable(); renderWaList(); }
+  if (name === 'customer') renderCustomerView();
+  if (name === 'followup') renderCustomerFollowupTable();
+  if (name === 'whatsapp') renderWaList();
   if (name === 'history') renderHistory();
 }
 
@@ -1718,6 +1734,66 @@ function resetCustomerFilters() {
   renderCustomerFollowupTable();
 }
 
+function updateBulkBar() {
+  const bar = document.getElementById('cf-bulk-bar');
+  const countEl = document.getElementById('cf-selected-count');
+  if (!bar) return;
+  if (selectedCustomerIds.size > 0) {
+    bar.style.display = 'flex';
+    if (countEl) countEl.textContent = `${selectedCustomerIds.size} Customers Select केले आहेत`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function toggleSelectOneCustomer(id, checked) {
+  if (checked) selectedCustomerIds.add(id);
+  else selectedCustomerIds.delete(id);
+  updateBulkBar();
+  const selectAllEl = document.getElementById('cf-select-all');
+  if (selectAllEl && !checked) selectAllEl.checked = false;
+}
+
+function toggleSelectAllCustomers(checked) {
+  const rows = document.querySelectorAll('#cf-tbody input[type="checkbox"]');
+  rows.forEach(cb => {
+    const tr = cb.closest('tr');
+    if (!tr) return;
+    const onchangeAttr = cb.getAttribute('onchange') || '';
+    const match = onchangeAttr.match(/toggleSelectOneCustomer\((\d+)/);
+    if (!match) return;
+    const id = Number(match[1]);
+    cb.checked = checked;
+    if (checked) selectedCustomerIds.add(id);
+    else selectedCustomerIds.delete(id);
+  });
+  updateBulkBar();
+}
+
+function clearCustomerSelection() {
+  selectedCustomerIds.clear();
+  const selectAllEl = document.getElementById('cf-select-all');
+  if (selectAllEl) selectAllEl.checked = false;
+  renderCustomerFollowupTable();
+}
+
+async function deleteSelectedCustomers() {
+  if (!selectedCustomerIds.size) return;
+  const ids = Array.from(selectedCustomerIds);
+  if (!confirm(`निवडलेले ${ids.length} Customers Follow-up यादीतून कायमचे Delete करायचे का?`)) return;
+  showSync(true);
+  const { error } = await sb.from('aj_customers').delete().in('id', ids);
+  showSync(false);
+  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+  const deletedNames = customers.filter(c => ids.includes(c.id)).map(c => c.name).join(', ');
+  customers = customers.filter(c => !ids.includes(c.id));
+  selectedCustomerIds.clear();
+  renderCustomerFollowupTable();
+  renderWaList();
+  logAudit(`🗑️ ${ids.length} Customers एकत्र Delete केले`, deletedNames);
+  showToast(`🗑️ ${ids.length} Customers Delete झाले!`);
+}
+
 function renderCustomerFollowupTable() {
   const tbody = document.getElementById('cf-tbody');
   const countEl = document.getElementById('cf-count');
@@ -1738,12 +1814,14 @@ function renderCustomerFollowupTable() {
   });
 
   if (countEl) countEl.textContent = `${list.length} Customers`;
+  updateBulkBar();
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = list.map((c, i) => `
     <tr class="${c.inactive ? 'cf-inactive' : ''}">
+      <td style="text-align:center"><input type="checkbox" ${selectedCustomerIds.has(c.id) ? 'checked' : ''} onchange="toggleSelectOneCustomer(${c.id}, this.checked)"></td>
       <td style="color:var(--text3);font-size:12px">${i + 1}</td>
       <td style="font-weight:500">${esc(c.name)}</td>
       <td style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
@@ -1760,6 +1838,8 @@ function renderCustomerFollowupTable() {
       </td>
     </tr>
   `).join('');
+  const selectAllEl = document.getElementById('cf-select-all');
+  if (selectAllEl) selectAllEl.checked = list.length > 0 && list.every(c => selectedCustomerIds.has(c.id));
 }
 
 async function toggleCustomerInactive(id) {
@@ -1826,6 +1906,7 @@ async function deleteCustomerFollowup(id) {
   showSync(false);
   if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
   customers = customers.filter(x => x.id !== id);
+  selectedCustomerIds.delete(id);
   renderCustomerFollowupTable();
   logAudit('🗑️ Customer Follow-up मधून Delete केला', c.name);
   showToast('🗑️ Customer Delete झाला!');
