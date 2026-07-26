@@ -909,6 +909,7 @@
         </div>
         <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
           <button class="btn-add" onclick="addCustomerManual()">➕ Customer Add करा</button>
+          <button class="btn-cancel" onclick="downloadCustomerTemplate()">📄 Excel Template Download करा</button>
           <button class="btn-cancel" onclick="document.getElementById('cf-import-file').click()">⬆️ Excel/CSV मधून Import करा</button>
           <input type="file" id="cf-import-file" accept=".csv" style="display:none" onchange="importCustomersCSV(this.files[0])">
           <button class="btn-cancel" onclick="exportCustomersCSV()">⬇️ Excel (CSV) Export करा</button>
@@ -1912,6 +1913,51 @@ async function deleteCustomerFollowup(id) {
   showToast('🗑️ Customer Delete झाला!');
 }
 
+function detectCsvDelimiter(line) {
+  const counts = { ',': (line.match(/,/g) || []).length, ';': (line.match(/;/g) || []).length, '\t': (line.match(/\t/g) || []).length };
+  let best = ',';
+  Object.keys(counts).forEach(d => { if (counts[d] > counts[best]) best = d; });
+  return best;
+}
+
+function parseCsvLine(line, delim) {
+  const result = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; continue; }
+    if (ch === delim && !inQuotes) { result.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function normalizeMobileNumber(raw) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  if (/e\+?\d/i.test(s)) {
+    const num = Number(s);
+    if (!isNaN(num)) s = Math.round(num).toString();
+  }
+  return s.replace(/\D/g, '');
+}
+
+function downloadCustomerTemplate() {
+  const csv = '\ufeffCustomer Name,Mobile Number\nRamesh Sharma,9876543210\nSuresh Patil,9123456780\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'customer-import-template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📄 Template Download झालं — यातच Data भरून परत Import करा!');
+}
+
 async function importCustomersCSV(file) {
   if (!file) return;
   const reader = new FileReader();
@@ -1919,12 +1965,13 @@ async function importCustomersCSV(file) {
     const text = e.target.result;
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     if (!lines.length) { showToast('⚠️ File रिकामी आहे!'); document.getElementById('cf-import-file').value = ''; return; }
+    const delim = detectCsvDelimiter(lines[0]);
     let startIdx = 0;
-    const firstCell = lines[0].split(',')[0].trim().toLowerCase().replace(/"/g, '');
-    if (firstCell === 'name' || firstCell.includes('customer')) startIdx = 1;
+    const firstCells = parseCsvLine(lines[0], delim).map(c => c.toLowerCase().replace(/"/g, ''));
+    if (firstCells[0] === 'name' || firstCells[0].includes('customer')) startIdx = 1;
     const parsedRows = lines.slice(startIdx).map(l => {
-      const parts = l.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
-      return { name: parts[0] || '', mobile: parts[1] || '' };
+      const parts = parseCsvLine(l, delim).map(p => p.replace(/^"|"$/g, '').trim());
+      return { name: parts[0] || '', mobile: normalizeMobileNumber(parts[1] || '') };
     }).filter(r => r.name);
     const existingLower = new Set(customers.map(c => c.name.toLowerCase()));
     const newOnes = [];
