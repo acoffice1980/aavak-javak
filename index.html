@@ -393,6 +393,9 @@
   tr.cf-inactive { opacity: 0.5; }
   tr.cf-inactive td { text-decoration: line-through; text-decoration-color: var(--red-text); }
   tr.cf-inactive .chk-cell { text-decoration: none; }
+  .cf-sticky-action { position: sticky; right: 0; background: var(--surface); box-shadow: -2px 0 4px rgba(0,0,0,0.08); }
+  thead .cf-sticky-action { background: var(--surface2); z-index: 2; }
+  tr.cf-inactive .cf-sticky-action { background: var(--surface); }
   table { width: 100%; border-collapse: collapse; }
   thead tr { background: var(--surface2); }
   th {
@@ -963,7 +966,7 @@
               <th>Payment Done</th>
               <th>Print Issue to Customer</th>
               <th>Status</th>
-              <th>Action</th>
+              <th class="cf-sticky-action">Action</th>
             </tr>
           </thead>
           <tbody id="cf-tbody"></tbody>
@@ -1751,7 +1754,7 @@ function renderCustomerFollowupTable() {
       <td class="chk-cell"><input type="checkbox" ${c.paymentDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'paymentDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.printIssueDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'printIssueDone', this.checked)"></td>
       <td>${c.inactive ? '<span class="badge badge-pending">✖ X</span>' : '<span class="badge badge-done">Active</span>'}</td>
-      <td style="white-space:nowrap">
+      <td style="white-space:nowrap" class="cf-sticky-action">
         <button class="icon-btn" title="${c.inactive ? 'Active करा' : 'X मार्क करा (ITR File नाही करायचं)'}" onclick="toggleCustomerInactive(${c.id})">${c.inactive ? '✅' : '✖'}</button>
         <button class="icon-btn del" onclick="deleteCustomerFollowup(${c.id})" title="Delete">🗑️</button>
       </td>
