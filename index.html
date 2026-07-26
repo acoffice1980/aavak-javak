@@ -127,7 +127,7 @@
   .auth-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.8rem; }
   .field { margin-bottom: 1rem; }
   .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; letter-spacing: 0.3px; }
-  .field input, .field select {
+  .field input, .field select, .field textarea {
     width: 100%;
     padding: 10px 14px;
     border: 2px solid var(--border-md);
@@ -139,7 +139,8 @@
     outline: none;
     transition: border-color 0.15s, transform 0.1s;
   }
-  .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+  .field textarea { resize: vertical; font-family: inherit; }
   .btn-primary {
     width: 100%;
     padding: 12px;
@@ -386,9 +387,12 @@
     background: var(--surface);
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow: auto;
     box-shadow: var(--shadow);
   }
+  tr.cf-inactive { opacity: 0.5; }
+  tr.cf-inactive td { text-decoration: line-through; text-decoration-color: var(--red-text); }
+  tr.cf-inactive .chk-cell { text-decoration: none; }
   table { width: 100%; border-collapse: collapse; }
   thead tr { background: var(--surface2); }
   th {
@@ -891,6 +895,10 @@
             <label>नवीन Customer चे नाव</label>
             <input type="text" id="cf-new-name" placeholder="उदा. Ramesh Sharma" onkeydown="if(event.key==='Enter')addCustomerManual()">
           </div>
+          <div class="field">
+            <label>Mobile Number (WhatsApp साठी)</label>
+            <input type="text" id="cf-new-mobile" placeholder="उदा. 9876543210" onkeydown="if(event.key==='Enter')addCustomerManual()">
+          </div>
         </div>
         <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
           <button class="btn-add" onclick="addCustomerManual()">➕ Customer Add करा</button>
@@ -900,8 +908,44 @@
         </div>
       </div>
 
-      <div class="filter-bar">
-        <input type="text" id="cf-search" placeholder="Follow-up यादीत Customer शोधा..." oninput="renderCustomerFollowupTable()" style="min-width:220px">
+      <div class="filter-bar" style="flex-wrap:wrap">
+        <input type="text" id="cf-search" placeholder="Follow-up यादीत Customer शोधा..." oninput="renderCustomerFollowupTable()" style="min-width:180px">
+        <select id="cf-status-filter" onchange="renderCustomerFollowupTable()">
+          <option value="all">Status: सर्व</option>
+          <option value="active">Status: फक्त Active</option>
+          <option value="inactive">Status: फक्त X (ITR File नाही करायचं)</option>
+        </select>
+        <select id="cf-filter-setupDone" onchange="renderCustomerFollowupTable()">
+          <option value="all">Setup: सर्व</option>
+          <option value="done">Setup: Done</option>
+          <option value="pending">Setup: Pending</option>
+        </select>
+        <select id="cf-filter-checkingDone" onchange="renderCustomerFollowupTable()">
+          <option value="all">Checking: सर्व</option>
+          <option value="done">Checking: Done</option>
+          <option value="pending">Checking: Pending</option>
+        </select>
+        <select id="cf-filter-returnUploadDone" onchange="renderCustomerFollowupTable()">
+          <option value="all">Return Upload: सर्व</option>
+          <option value="done">Return Upload: Done</option>
+          <option value="pending">Return Upload: Pending</option>
+        </select>
+        <select id="cf-filter-printDone" onchange="renderCustomerFollowupTable()">
+          <option value="all">Print: सर्व</option>
+          <option value="done">Print: Done</option>
+          <option value="pending">Print: Pending</option>
+        </select>
+        <select id="cf-filter-paymentDone" onchange="renderCustomerFollowupTable()">
+          <option value="all">Payment: सर्व</option>
+          <option value="done">Payment: Done</option>
+          <option value="pending">Payment: Pending</option>
+        </select>
+        <select id="cf-filter-printIssueDone" onchange="renderCustomerFollowupTable()">
+          <option value="all">Print Issue: सर्व</option>
+          <option value="done">Print Issue: Done</option>
+          <option value="pending">Print Issue: Pending</option>
+        </select>
+        <button class="btn-cancel" onclick="resetCustomerFilters()">↺ Filters Reset</button>
         <span class="filter-count" id="cf-count"></span>
       </div>
 
@@ -911,17 +955,38 @@
             <tr>
               <th>#</th>
               <th>Customer चे नाव</th>
+              <th>Mobile</th>
               <th>Setup Done</th>
               <th>Checking Done</th>
               <th>Return Upload Done</th>
               <th>Print Done</th>
               <th>Payment Done</th>
               <th>Print Issue to Customer</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody id="cf-tbody"></tbody>
         </table>
+      </div>
+
+      <!-- WHATSAPP FOLLOW-UP SECTION (SEPARATE) -->
+      <div class="form-card" style="margin-top:1.5rem">
+        <div class="form-card-title">📲 WhatsApp Follow-up</div>
+        <div class="form-grid">
+          <div class="field" style="grid-column:1/-1">
+            <label>Default WhatsApp Message (यात {name} लिहिलं की आपोआप Customer चं नाव येईल)</label>
+            <textarea id="cf-wa-template" rows="3" placeholder="तुमचं Print Ready आहे, कृपया collect करा."></textarea>
+          </div>
+        </div>
+        <div class="form-actions" style="justify-content:flex-start">
+          <button class="btn-add" onclick="saveWaTemplate()">💾 Message Save करा</button>
+        </div>
+        <div class="filter-bar" style="margin-top:1rem">
+          <input type="text" id="cf-wa-search" placeholder="WhatsApp पाठवण्यासाठी Customer शोधा..." oninput="renderWaList()" style="min-width:200px">
+          <span class="filter-count" id="cf-wa-count"></span>
+        </div>
+        <div id="cf-wa-list"></div>
       </div>
     </div>
 
@@ -1091,7 +1156,7 @@ function mapAuditFromDb(a) {
   return { id: a.id, time: a.time, user: a.user_name, action: a.action, details: a.details };
 }
 function mapCustomerFromDb(c) {
-  return { id: c.id, name: c.name, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+  return { id: c.id, name: c.name, mobile: c.mobile || '', inactive: !!c.inactive, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
 }
 
 async function initData() {
@@ -1134,6 +1199,7 @@ function setupRealtime() {
       const { data } = await sb.from('aj_customers').select('*').order('id', { ascending: false });
       customers = (data || []).map(mapCustomerFromDb);
       renderCustomerFollowupTable();
+      renderWaList();
     })
     .subscribe();
 }
@@ -1161,6 +1227,8 @@ async function doLogin() {
   generateReport();
   renderHistory();
   if (currentRole === 'admin') renderStaffTable();
+  loadWaTemplate();
+  setTimeout(autoBackupAllData, 1500);
 }
 
 function doLogout() {
@@ -1242,7 +1310,7 @@ function switchTab(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
   if (name === 'share') { generateReport(); updateShareStats(); }
-  if (name === 'customer') { renderCustomerView(); renderCustomerFollowupTable(); }
+  if (name === 'customer') { renderCustomerView(); renderCustomerFollowupTable(); renderWaList(); }
   if (name === 'history') renderHistory();
 }
 
@@ -1637,48 +1705,95 @@ function onGlobalSearch(val) {
   }
 }
 
+function resetCustomerFilters() {
+  ['cf-status-filter','cf-filter-setupDone','cf-filter-checkingDone','cf-filter-returnUploadDone','cf-filter-printDone','cf-filter-paymentDone','cf-filter-printIssueDone'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = el.id === 'cf-status-filter' ? 'all' : 'all';
+  });
+  const s = document.getElementById('cf-search');
+  if (s) s.value = '';
+  renderCustomerFollowupTable();
+}
+
 function renderCustomerFollowupTable() {
   const tbody = document.getElementById('cf-tbody');
   const countEl = document.getElementById('cf-count');
   if (!tbody) return;
   const searchEl = document.getElementById('cf-search');
   const q = (searchEl ? searchEl.value : '').toLowerCase();
-  const list = customers.filter(c => !q || c.name.toLowerCase().includes(q));
+  const statusFilter = document.getElementById('cf-status-filter')?.value || 'all';
+  const colFields = ['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'];
+  const colFilters = {};
+  colFields.forEach(f => { colFilters[f] = document.getElementById(`cf-filter-${f}`)?.value || 'all'; });
+
+  let list = customers.filter(c => !q || c.name.toLowerCase().includes(q) || (c.mobile || '').includes(q));
+  if (statusFilter === 'active') list = list.filter(c => !c.inactive);
+  if (statusFilter === 'inactive') list = list.filter(c => c.inactive);
+  colFields.forEach(f => {
+    if (colFilters[f] === 'done') list = list.filter(c => c[f]);
+    if (colFilters[f] === 'pending') list = list.filter(c => !c[f]);
+  });
+
   if (countEl) countEl.textContent = `${list.length} Customers`;
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="empty-state-icon">👤</div><p>अजून कोणताही Customer Follow-up यादीत Add केलेला नाही</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = list.map((c, i) => `
-    <tr>
+    <tr class="${c.inactive ? 'cf-inactive' : ''}">
       <td style="color:var(--text3);font-size:12px">${i + 1}</td>
       <td style="font-weight:500">${esc(c.name)}</td>
-      <td class="chk-cell"><input type="checkbox" ${c.setupDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'setupDone', this.checked)"></td>
-      <td class="chk-cell"><input type="checkbox" ${c.checkingDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'checkingDone', this.checked)"></td>
-      <td class="chk-cell"><input type="checkbox" ${c.returnUploadDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
-      <td class="chk-cell"><input type="checkbox" ${c.printDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'printDone', this.checked)"></td>
-      <td class="chk-cell"><input type="checkbox" ${c.paymentDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'paymentDone', this.checked)"></td>
-      <td class="chk-cell"><input type="checkbox" ${c.printIssueDone ? 'checked' : ''} onchange="toggleCustomerFlag(${c.id}, 'printIssueDone', this.checked)"></td>
-      <td><button class="icon-btn del" onclick="deleteCustomerFollowup(${c.id})" title="Delete">🗑️</button></td>
+      <td style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
+      <td class="chk-cell"><input type="checkbox" ${c.setupDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'setupDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.checkingDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'checkingDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.returnUploadDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.printDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'printDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.paymentDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'paymentDone', this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" ${c.printIssueDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'printIssueDone', this.checked)"></td>
+      <td>${c.inactive ? '<span class="badge badge-pending">✖ X</span>' : '<span class="badge badge-done">Active</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="icon-btn" title="${c.inactive ? 'Active करा' : 'X मार्क करा (ITR File नाही करायचं)'}" onclick="toggleCustomerInactive(${c.id})">${c.inactive ? '✅' : '✖'}</button>
+        <button class="icon-btn del" onclick="deleteCustomerFollowup(${c.id})" title="Delete">🗑️</button>
+      </td>
     </tr>
   `).join('');
 }
 
+async function toggleCustomerInactive(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  const newVal = !c.inactive;
+  if (newVal && !confirm(`"${c.name}" ला यावर्षी ITR Return File करायचं नाही म्हणून X मार्क करायचं का?`)) return;
+  c.inactive = newVal;
+  showSync(true);
+  const { error } = await sb.from('aj_customers').update({ inactive: newVal }).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Update होऊ शकले नाही'); c.inactive = !newVal; renderCustomerFollowupTable(); return; }
+  renderCustomerFollowupTable();
+  renderWaList();
+  logAudit(newVal ? '✖ Customer यावर्षी ITR File करणार नाही (X मार्क)' : '✅ Customer पुन्हा Active केला', c.name);
+  showToast(newVal ? '✖ Customer X मार्क झाला!' : '✅ Customer Active झाला!');
+}
+
 async function addCustomerManual() {
   const input = document.getElementById('cf-new-name');
+  const mobileInput = document.getElementById('cf-new-mobile');
   const name = input.value.trim();
+  const mobile = mobileInput.value.trim();
   if (!name) { showToast('⚠️ Customer चे नाव टाका!'); return; }
   if (customers.some(c => c.name.toLowerCase() === name.toLowerCase())) { showToast('⚠️ हा Customer आधीच यादीत आहे!'); return; }
-  const entry = { id: Date.now(), name, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
+  const entry = { id: Date.now(), name, mobile, inactive: false, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
   showSync(true);
   const { error } = await sb.from('aj_customers').insert({
-    id: entry.id, name: entry.name, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
+    id: entry.id, name: entry.name, mobile: entry.mobile, inactive: false, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
   });
   showSync(false);
   if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
   customers.unshift(entry);
   input.value = '';
+  mobileInput.value = '';
   renderCustomerFollowupTable();
+  renderWaList();
   logAudit('👤 नवीन Customer Follow-up मध्ये Add केला', name);
   showToast('✅ Customer Add झाला!');
 }
@@ -1686,6 +1801,7 @@ async function addCustomerManual() {
 async function toggleCustomerFlag(id, field, value) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
+  if (c.inactive) { showToast('⚠️ हा Customer X मार्क आहे — आधी Active करा!'); renderCustomerFollowupTable(); return; }
   const dbFieldMap = { setupDone: 'setup_done', checkingDone: 'checking_done', returnUploadDone: 'return_upload_done', printDone: 'print_done', paymentDone: 'payment_done', printIssueDone: 'print_issue_done' };
   const labelMap = { setupDone: 'Setup Done', checkingDone: 'Checking Done', returnUploadDone: 'Return Upload Done', printDone: 'Print Done', paymentDone: 'Payment Done', printIssueDone: 'Print Issue to Customer' };
   const prevValue = c[field];
@@ -1722,44 +1838,124 @@ async function importCustomersCSV(file) {
     let startIdx = 0;
     const firstCell = lines[0].split(',')[0].trim().toLowerCase().replace(/"/g, '');
     if (firstCell === 'name' || firstCell.includes('customer')) startIdx = 1;
-    const rawNames = lines.slice(startIdx).map(l => l.split(',')[0].trim().replace(/^"|"$/g, '')).filter(Boolean);
+    const parsedRows = lines.slice(startIdx).map(l => {
+      const parts = l.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+      return { name: parts[0] || '', mobile: parts[1] || '' };
+    }).filter(r => r.name);
     const existingLower = new Set(customers.map(c => c.name.toLowerCase()));
     const newOnes = [];
-    rawNames.forEach(name => {
-      const lower = name.toLowerCase();
-      if (!existingLower.has(lower)) { existingLower.add(lower); newOnes.push(name); }
+    parsedRows.forEach(r => {
+      const lower = r.name.toLowerCase();
+      if (!existingLower.has(lower)) { existingLower.add(lower); newOnes.push(r); }
     });
     if (!newOnes.length) { showToast('⚠️ Import करण्यासाठी नवीन Customer सापडले नाहीत!'); document.getElementById('cf-import-file').value = ''; return; }
-    const rows = newOnes.map((name, i) => ({
-      id: Date.now() + i, name, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
+    const rows = newOnes.map((r, i) => ({
+      id: Date.now() + i, name: r.name, mobile: r.mobile, inactive: false, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
     }));
     showSync(true);
     const { error } = await sb.from('aj_customers').insert(rows);
     showSync(false);
     document.getElementById('cf-import-file').value = '';
     if (error) { showToast('⚠️ Import होऊ शकले नाही'); return; }
-    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
+    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, mobile: r.mobile, inactive: false, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
     renderCustomerFollowupTable();
+    renderWaList();
     logAudit('⬆️ Excel मधून Customers Import केले', `${newOnes.length} नवीन Customers`);
     showToast(`✅ ${newOnes.length} Customers Import झाले!`);
   };
   reader.readAsText(file);
 }
 
-function exportCustomersCSV() {
-  const header = ['Customer Name', 'Setup Done', 'Checking Done', 'Return Upload Done', 'Print Done', 'Payment Done', 'Print Issue to Customer'];
-  const rows = customers.map(c => [c.name, c.setupDone ? 'Yes' : 'No', c.checkingDone ? 'Yes' : 'No', c.returnUploadDone ? 'Yes' : 'No', c.printDone ? 'Yes' : 'No', c.paymentDone ? 'Yes' : 'No', c.printIssueDone ? 'Yes' : 'No']);
+function exportCustomersCSV(filename) {
+  const header = ['Customer Name', 'Mobile', 'Status', 'Setup Done', 'Checking Done', 'Return Upload Done', 'Print Done', 'Payment Done', 'Print Issue to Customer'];
+  const rows = customers.map(c => [c.name, c.mobile || '', c.inactive ? 'X (ITR File नाही)' : 'Active', c.setupDone ? 'Yes' : 'No', c.checkingDone ? 'Yes' : 'No', c.returnUploadDone ? 'Yes' : 'No', c.printDone ? 'Yes' : 'No', c.paymentDone ? 'Yes' : 'No', c.printIssueDone ? 'Yes' : 'No']);
   const csv = header.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `customer-followup-${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = filename || `customer-followup-${new Date().toISOString().split('T')[0]}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('📊 Customer List Export झाली!');
+  if (!filename) showToast('📊 Customer List Export झाली!');
+}
+
+/* ── WHATSAPP FOLLOW-UP ── */
+function loadWaTemplate() {
+  const saved = localStorage.getItem('aj_wa_template');
+  const el = document.getElementById('cf-wa-template');
+  if (el) el.value = saved || 'नमस्कार {name}, तुमचं Print Ready आहे. कृपया ऑफिसमधून येऊन घेऊन जा. धन्यवाद!';
+}
+
+function saveWaTemplate() {
+  const el = document.getElementById('cf-wa-template');
+  if (!el) return;
+  localStorage.setItem('aj_wa_template', el.value);
+  showToast('💾 WhatsApp Message Save झाला!');
+}
+
+function renderWaList() {
+  const listEl = document.getElementById('cf-wa-list');
+  const countEl = document.getElementById('cf-wa-count');
+  if (!listEl) return;
+  const q = (document.getElementById('cf-wa-search')?.value || '').toLowerCase();
+  const list = customers.filter(c => !c.inactive && (!q || c.name.toLowerCase().includes(q)));
+  if (countEl) countEl.textContent = `${list.length} Active Customers`;
+  if (!list.length) {
+    listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📲</div><p>WhatsApp पाठवण्यासाठी Active Customer सापडला नाही</p></div>`;
+    return;
+  }
+  listEl.innerHTML = list.map(c => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:0.5px solid var(--border)">
+      <div>
+        <div style="font-weight:500">${esc(c.name)}</div>
+        <div style="font-size:12px;color:var(--text3)">${esc(c.mobile || 'Mobile नंबर नाही')}</div>
+      </div>
+      <button class="btn-add" style="padding:6px 14px;font-size:12px" onclick="sendWaMessage(${c.id})" ${c.mobile ? '' : 'disabled'}>📲 WhatsApp पाठवा</button>
+    </div>
+  `).join('');
+}
+
+function sendWaMessage(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  if (!c.mobile) { showToast('⚠️ या Customer चा Mobile Number नाही!'); return; }
+  const template = localStorage.getItem('aj_wa_template') || 'नमस्कार {name}, तुमचं Print Ready आहे. कृपया ऑफिसमधून येऊन घेऊन जा. धन्यवाद!';
+  const msg = template.replace(/\{name\}/g, c.name);
+  let digits = c.mobile.replace(/\D/g, '');
+  if (digits.length === 10) digits = '91' + digits;
+  window.open(`https://wa.me/${digits}?text=${encodeURIComponent(msg)}`, '_blank');
+  logAudit('📲 Customer ला WhatsApp Message पाठवला', c.name);
+}
+
+/* ── AUTO BACKUP ── */
+function autoBackupAllData() {
+  const todayKey = new Date().toISOString().split('T')[0];
+  const last = localStorage.getItem('aj_last_backup');
+  if (last === todayKey) return;
+  if (records.length) {
+    let csv = 'Type,Customer,Documents,Date,Status,Return Date,Note,Entered By\n';
+    records.forEach(r => {
+      const row = [r.type === 'aavak' ? 'Aavak' : 'Javak', r.customer, (r.documents || []).join('; '), r.date, r.status, r.expectedReturn || '', r.note || '', r.by].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+      csv += row + '\n';
+    });
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AUTO-BACKUP-records-${todayKey}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  if (customers.length) {
+    setTimeout(() => exportCustomersCSV(`AUTO-BACKUP-customers-${todayKey}.csv`), 700);
+  }
+  localStorage.setItem('aj_last_backup', todayKey);
+  setTimeout(() => showToast('🗄️ आजचा Data Backup Automatically Download झाला!'), 1000);
 }
 
 function openDel(id) { deleteTarget = id; document.getElementById('del-modal').classList.remove('hidden'); }
