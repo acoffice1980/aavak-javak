@@ -395,6 +395,9 @@
   tr.cf-inactive .chk-cell { text-decoration: none; }
   .cf-sticky-action { background: var(--surface); }
   tr.cf-inactive .cf-sticky-action { background: var(--surface); }
+  #cf-tbody-table th { text-align: center; line-height: 1.3; white-space: nowrap; }
+  #cf-tbody-table th:nth-child(1), #cf-tbody-table th:nth-child(2), #cf-tbody-table th:nth-child(3) { text-align: left; }
+  #cf-tbody-table .chk-cell, #cf-tbody-table td:nth-child(4) { text-align: center; }
   table { width: 100%; border-collapse: collapse; }
   thead tr { background: var(--surface2); }
   th {
@@ -953,6 +956,9 @@
           <option value="pending">Print Issue: Pending</option>
         </select>
         <button class="btn-cancel" onclick="resetCustomerFilters()">↺ Filters Reset</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap">
+          <input type="checkbox" id="cf-show-mobile" checked onchange="toggleMobileColumn()"> Mobile Numbers दाखवा
+        </label>
         <span class="filter-count" id="cf-count"></span>
       </div>
 
@@ -963,19 +969,19 @@
       </div>
 
       <div class="table-wrap cf-sticky-wrap">
-        <table>
+        <table id="cf-tbody-table">
           <thead>
             <tr>
               <th style="text-align:center"><input type="checkbox" id="cf-select-all" onchange="toggleSelectAllCustomers(this.checked)"></th>
               <th>#</th>
               <th>Customer चे नाव</th>
-              <th>Mobile</th>
-              <th>Setup Done</th>
-              <th>Checking Done</th>
-              <th>Return Upload Done</th>
-              <th>Print Done</th>
-              <th>Payment Done</th>
-              <th>Print Issue to Customer</th>
+              <th id="cf-th-mobile">Mobile</th>
+              <th>Setup<br>Done</th>
+              <th>Checking<br>Done</th>
+              <th>Return<br>Upload<br>Done</th>
+              <th>Print<br>Done</th>
+              <th>Payment<br>Done</th>
+              <th>Print<br>Issue</th>
               <th>Status</th>
               <th class="cf-sticky-action">Action</th>
             </tr>
@@ -1812,6 +1818,7 @@ function renderCustomerFollowupTable() {
     if (colFilters[f] === 'done') list = list.filter(c => c[f]);
     if (colFilters[f] === 'pending') list = list.filter(c => !c[f]);
   });
+  list.sort((a, b) => a.name.localeCompare(b.name, 'mr'));
 
   if (countEl) countEl.textContent = `${list.length} Customers`;
   updateBulkBar();
@@ -1824,7 +1831,7 @@ function renderCustomerFollowupTable() {
       <td style="text-align:center"><input type="checkbox" ${selectedCustomerIds.has(c.id) ? 'checked' : ''} onchange="toggleSelectOneCustomer(${c.id}, this.checked)"></td>
       <td style="color:var(--text3);font-size:12px">${i + 1}</td>
       <td style="font-weight:500">${esc(c.name)}</td>
-      <td style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
+      <td class="cf-mobile-col" style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
       <td class="chk-cell"><input type="checkbox" ${c.setupDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'setupDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.checkingDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'checkingDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.returnUploadDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
@@ -1840,6 +1847,14 @@ function renderCustomerFollowupTable() {
   `).join('');
   const selectAllEl = document.getElementById('cf-select-all');
   if (selectAllEl) selectAllEl.checked = list.length > 0 && list.every(c => selectedCustomerIds.has(c.id));
+  toggleMobileColumn();
+}
+
+function toggleMobileColumn() {
+  const show = document.getElementById('cf-show-mobile')?.checked !== false;
+  const th = document.getElementById('cf-th-mobile');
+  if (th) th.style.display = show ? '' : 'none';
+  document.querySelectorAll('#cf-tbody .cf-mobile-col').forEach(td => { td.style.display = show ? '' : 'none'; });
 }
 
 async function toggleCustomerInactive(id) {
