@@ -976,7 +976,6 @@
               <th>#</th>
               <th>Customer चे नाव</th>
               <th id="cf-th-mobile">Mobile</th>
-              <th>Progress</th>
               <th>Setup<br>Done</th>
               <th>Checking<br>Done</th>
               <th>Return<br>Upload<br>Done</th>
@@ -1731,21 +1730,6 @@ function onGlobalSearch(val) {
   }
 }
 
-function cfProgressBar(c) {
-  const fields = ['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'];
-  const done = fields.filter(f => c[f]).length;
-  const pct = Math.round((done / fields.length) * 100);
-  const color = done === fields.length ? 'var(--green-text, #16a34a)' : (done === 0 ? 'var(--text3)' : 'var(--accent)');
-  return `
-    <div style="display:flex;align-items:center;gap:6px;min-width:90px">
-      <div style="flex:1;height:6px;border-radius:4px;background:var(--surface2);overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px"></div>
-      </div>
-      <span style="font-size:11px;color:var(--text3);white-space:nowrap">${done}/${fields.length}</span>
-    </div>
-  `;
-}
-
 function resetCustomerFilters() {
   ['cf-status-filter','cf-filter-setupDone','cf-filter-checkingDone','cf-filter-returnUploadDone','cf-filter-printDone','cf-filter-paymentDone','cf-filter-printIssueDone'].forEach(id => {
     const el = document.getElementById(id);
@@ -1839,7 +1823,7 @@ function renderCustomerFollowupTable() {
   if (countEl) countEl.textContent = `${list.length} Customers`;
   updateBulkBar();
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = list.map((c, i) => `
@@ -1848,7 +1832,6 @@ function renderCustomerFollowupTable() {
       <td style="color:var(--text3);font-size:12px">${i + 1}</td>
       <td style="font-weight:500">${esc(c.name)}</td>
       <td class="cf-mobile-col" style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
-      <td>${cfProgressBar(c)}</td>
       <td class="chk-cell"><input type="checkbox" ${c.setupDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'setupDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.checkingDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'checkingDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" ${c.returnUploadDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
