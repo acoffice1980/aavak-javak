@@ -924,6 +924,7 @@
           <option value="all">Status: सर्व</option>
           <option value="active">Status: फक्त Active</option>
           <option value="inactive">Status: फक्त X (ITR File नाही करायचं)</option>
+          <option value="trash">🗑️ Trash (Deleted)</option>
         </select>
         <select id="cf-filter-setupDone" onchange="renderCustomerFollowupTable()">
           <option value="all">Setup: सर्व</option>
@@ -976,7 +977,7 @@
               <th>#</th>
               <th>Customer चे नाव</th>
               <th id="cf-th-mobile">Mobile</th>
-              <th>Progress</th>
+              <th>All<br>Tick</th>
               <th>Setup<br>Done</th>
               <th>Checking<br>Done</th>
               <th>Return<br>Upload<br>Done</th>
@@ -1180,7 +1181,53 @@ function mapAuditFromDb(a) {
   return { id: a.id, time: a.time, user: a.user_name, action: a.action, details: a.details };
 }
 function mapCustomerFromDb(c) {
-  return { id: c.id, name: c.name, mobile: c.mobile || '', inactive: !!c.inactive, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+  return { id: c.id, name: c.name, mobile: c.mobile || '', inactive: !!c.inactive, deleted: !!c.deleted, yearHistory: c.year_history || [], setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+}
+
+function levenshteinDist(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function fuzzyNameMatch(name, query) {
+  if (!query) return true;
+  const text = name.toLowerCase();
+  const q = query.toLowerCase().trim();
+  if (text.includes(q)) return true;
+  const maxDist = q.length <= 4 ? 1 : 2;
+  return text.split(/\s+/).some(w => levenshteinDist(w, q) <= maxDist);
+}
+
+function normalizeNameKey(name) {
+  return name.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+async function toggleAllFlagsForCustomer(id, value) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  if (c.inactive) { showToast('⚠️ हा Customer X मार्क आहे — आधी Active करा!'); renderCustomerFollowupTable(); return; }
+  const fields = ['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'];
+  const dbFieldMap = { setupDone: 'setup_done', checkingDone: 'checking_done', returnUploadDone: 'return_upload_done', printDone: 'print_done', paymentDone: 'payment_done', printIssueDone: 'print_issue_done' };
+  const prev = {};
+  fields.forEach(f => { prev[f] = c[f]; c[f] = value; });
+  showSync(true);
+  const updateObj = {};
+  fields.forEach(f => { updateObj[dbFieldMap[f]] = value; });
+  const { error } = await sb.from('aj_customers').update(updateObj).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Update होऊ शकले नाही'); fields.forEach(f => { c[f] = prev[f]; }); renderCustomerFollowupTable(); return; }
+  renderCustomerFollowupTable();
+  logAudit(`✅ ${c.name} — सर्व 6 काम एकत्र ${value ? 'Tick' : 'Untick'} केली`, value ? 'सर्व पूर्ण झाले ✔️' : 'सर्व Pending ✖️');
+  showToast(value ? '✅ सर्व 6 Tick झाले!' : '↺ सर्व Untick झाले!');
 }
 
 async function initData() {
@@ -1802,18 +1849,18 @@ function clearCustomerSelection() {
 async function deleteSelectedCustomers() {
   if (!selectedCustomerIds.size) return;
   const ids = Array.from(selectedCustomerIds);
-  if (!confirm(`निवडलेले ${ids.length} Customers Follow-up यादीतून कायमचे Delete करायचे का?`)) return;
+  if (!confirm(`निवडलेले ${ids.length} Customers Trash मध्ये टाकायचे का? (नंतर Restore करता येईल)`)) return;
   showSync(true);
-  const { error } = await sb.from('aj_customers').delete().in('id', ids);
+  const { error } = await sb.from('aj_customers').update({ deleted: true }).in('id', ids);
   showSync(false);
   if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
   const deletedNames = customers.filter(c => ids.includes(c.id)).map(c => c.name).join(', ');
-  customers = customers.filter(c => !ids.includes(c.id));
+  customers.forEach(c => { if (ids.includes(c.id)) c.deleted = true; });
   selectedCustomerIds.clear();
   renderCustomerFollowupTable();
   renderWaList();
-  logAudit(`🗑️ ${ids.length} Customers एकत्र Delete केले`, deletedNames);
-  showToast(`🗑️ ${ids.length} Customers Delete झाले!`);
+  logAudit(`🗑️ ${ids.length} Customers एकत्र Trash मध्ये टाकले`, deletedNames);
+  showToast(`🗑️ ${ids.length} Customers Trash मध्ये गेले!`);
 }
 
 function renderCustomerFollowupTable() {
@@ -1827,7 +1874,8 @@ function renderCustomerFollowupTable() {
   const colFilters = {};
   colFields.forEach(f => { colFilters[f] = document.getElementById(`cf-filter-${f}`)?.value || 'all'; });
 
-  let list = customers.filter(c => !q || c.name.toLowerCase().includes(q) || (c.mobile || '').includes(q));
+  let list = customers.filter(c => statusFilter === 'trash' ? c.deleted : !c.deleted);
+  list = list.filter(c => !q || fuzzyNameMatch(c.name, q) || (c.mobile || '').includes(q));
   if (statusFilter === 'active') list = list.filter(c => !c.inactive);
   if (statusFilter === 'inactive') list = list.filter(c => c.inactive);
   colFields.forEach(f => {
@@ -1836,10 +1884,24 @@ function renderCustomerFollowupTable() {
   });
   list.sort((a, b) => a.name.localeCompare(b.name, 'mr'));
 
-  if (countEl) countEl.textContent = `${list.length} Customers`;
+  if (countEl) countEl.textContent = statusFilter === 'trash' ? `${list.length} Trash मधील Customers` : `${list.length} Customers`;
   updateBulkBar();
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
+    return;
+  }
+  if (statusFilter === 'trash') {
+    tbody.innerHTML = list.map((c, i) => `
+      <tr class="cf-inactive">
+        <td></td>
+        <td style="color:var(--text3);font-size:12px">${i + 1}</td>
+        <td colspan="10" style="font-weight:500">${esc(c.name)} <span style="font-size:12px;color:var(--text3)">(${esc(c.mobile || 'Mobile नाही')})</span></td>
+        <td class="cf-sticky-action" style="white-space:nowrap">
+          <button class="icon-btn" title="Restore करा" onclick="restoreCustomer(${c.id})">♻️</button>
+          <button class="icon-btn del" title="कायमचं Delete करा" onclick="permanentDeleteCustomer(${c.id})">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
     return;
   }
   tbody.innerHTML = list.map((c, i) => `
@@ -1848,7 +1910,7 @@ function renderCustomerFollowupTable() {
       <td style="color:var(--text3);font-size:12px">${i + 1}</td>
       <td style="font-weight:500">${esc(c.name)}</td>
       <td class="cf-mobile-col" style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
-      <td>${cfProgressBar(c)}</td>
+      <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — सर्व 6 Tick करा" ${['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'].every(f => c[f]) ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleAllFlagsForCustomer(${c.id}, this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Setup Done" ${c.setupDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'setupDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Checking Done" ${c.checkingDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'checkingDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Return Upload Done" ${c.returnUploadDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
@@ -1857,6 +1919,8 @@ function renderCustomerFollowupTable() {
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Print Issue to Customer" ${c.printIssueDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'printIssueDone', this.checked)"></td>
       <td>${c.inactive ? '<span class="badge badge-pending">✖ X</span>' : '<span class="badge badge-done">Active</span>'}</td>
       <td style="white-space:nowrap" class="cf-sticky-action">
+        <button class="icon-btn" title="मागील वर्षांचा History बघा" onclick="viewCustomerHistory(${c.id})">📜</button>
+        <button class="icon-btn" title="नवीन वर्षासाठी Reset करा (जुनं Save होईल)" onclick="startNewYearForCustomer(${c.id})">📅</button>
         <button class="icon-btn" title="${c.inactive ? 'Active करा' : 'X मार्क करा (ITR File नाही करायचं)'}" onclick="toggleCustomerInactive(${c.id})">${c.inactive ? '✅' : '✖'}</button>
         <button class="icon-btn del" onclick="deleteCustomerFollowup(${c.id})" title="Delete">🗑️</button>
       </td>
@@ -1894,13 +1958,18 @@ async function addCustomerManual() {
   const input = document.getElementById('cf-new-name');
   const mobileInput = document.getElementById('cf-new-mobile');
   const name = input.value.trim();
-  const mobile = mobileInput.value.trim();
+  let mobile = mobileInput.value.trim();
   if (!name) { showToast('⚠️ Customer चे नाव टाका!'); return; }
-  if (customers.some(c => c.name.toLowerCase() === name.toLowerCase())) { showToast('⚠️ हा Customer आधीच यादीत आहे!'); return; }
-  const entry = { id: Date.now(), name, mobile, inactive: false, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
+  const nameKey = normalizeNameKey(name);
+  if (customers.some(c => !c.deleted && normalizeNameKey(c.name) === nameKey)) { showToast('⚠️ हा Customer आधीच यादीत आहे!'); return; }
+  if (mobile) {
+    mobile = normalizeMobileNumber(mobile);
+    if (mobile.length !== 10) { showToast('⚠️ Mobile Number बरोबर 10 आकड्यांचा टाका (किंवा रिकामं ठेवा)!'); return; }
+  }
+  const entry = { id: Date.now(), name, mobile, inactive: false, deleted: false, yearHistory: [], setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
   showSync(true);
   const { error } = await sb.from('aj_customers').insert({
-    id: entry.id, name: entry.name, mobile: entry.mobile, inactive: false, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
+    id: entry.id, name: entry.name, mobile: entry.mobile, inactive: false, deleted: false, year_history: [], setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
   });
   showSync(false);
   if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
@@ -1932,16 +2001,82 @@ async function toggleCustomerFlag(id, field, value) {
 async function deleteCustomerFollowup(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
-  if (!confirm(`"${c.name}" ला Follow-up यादीतून Delete करायचे का?`)) return;
+  if (!confirm(`"${c.name}" ला Trash मध्ये टाकायचे का? (नंतर Restore करता येईल)`)) return;
+  showSync(true);
+  const { error } = await sb.from('aj_customers').update({ deleted: true }).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+  c.deleted = true;
+  selectedCustomerIds.delete(id);
+  renderCustomerFollowupTable();
+  logAudit('🗑️ Customer Trash मध्ये टाकला', c.name);
+  showToast('🗑️ Customer Trash मध्ये गेला! (Restore करता येईल)');
+}
+
+async function restoreCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  showSync(true);
+  const { error } = await sb.from('aj_customers').update({ deleted: false }).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Restore होऊ शकले नाही'); return; }
+  c.deleted = false;
+  renderCustomerFollowupTable();
+  renderWaList();
+  logAudit('♻️ Customer Trash मधून Restore केला', c.name);
+  showToast('♻️ Customer Restore झाला!');
+}
+
+async function permanentDeleteCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`"${c.name}" ला कायमचं (Permanently) Delete करायचं का? हे परत आणता येणार नाही!`)) return;
   showSync(true);
   const { error } = await sb.from('aj_customers').delete().eq('id', id);
   showSync(false);
   if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
   customers = customers.filter(x => x.id !== id);
-  selectedCustomerIds.delete(id);
   renderCustomerFollowupTable();
-  logAudit('🗑️ Customer Follow-up मधून Delete केला', c.name);
-  showToast('🗑️ Customer Delete झाला!');
+  logAudit('🗑️ Customer कायमचा Delete केला', c.name);
+  showToast('🗑️ Customer कायमचा Delete झाला!');
+}
+
+function viewCustomerHistory(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  if (!c.yearHistory || !c.yearHistory.length) { alert(`"${c.name}" साठी अजून मागील वर्षांचा History नाही.`); return; }
+  const labels = { setupDone: 'Setup', checkingDone: 'Checking', returnUploadDone: 'Return Upload', printDone: 'Print', paymentDone: 'Payment', printIssueDone: 'Print Issue' };
+  let msg = `${c.name} — मागील वर्षांचा History:\n\n`;
+  c.yearHistory.slice().reverse().forEach(h => {
+    msg += `📅 वर्ष: ${h.year}\n`;
+    Object.keys(labels).forEach(f => { msg += `   ${h[f] ? '✔️' : '✖️'} ${labels[f]}\n`; });
+    msg += `\n`;
+  });
+  alert(msg);
+}
+
+async function startNewYearForCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  const year = prompt('कोणत्या वर्षाचा Record Save करायचा? (उदा. 2025-26)', '');
+  if (!year) return;
+  const fields = ['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'];
+  const snapshot = { year: year.trim() };
+  fields.forEach(f => { snapshot[f] = c[f]; });
+  const newHistory = [...(c.yearHistory || []), snapshot];
+  const resetVals = {};
+  fields.forEach(f => { resetVals[f] = false; });
+  showSync(true);
+  const { error } = await sb.from('aj_customers').update({
+    year_history: newHistory, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false
+  }).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
+  c.yearHistory = newHistory;
+  fields.forEach(f => { c[f] = false; });
+  renderCustomerFollowupTable();
+  logAudit(`📅 ${c.name} — वर्ष "${year}" Save करून नवीन वर्षासाठी Reset केला`, '');
+  showToast(`📅 वर्ष "${year}" Save झालं, नवीन वर्षासाठी तयार!`);
 }
 
 function detectCsvDelimiter(line) {
@@ -2004,25 +2139,29 @@ async function importCustomersCSV(file) {
       const parts = parseCsvLine(l, delim).map(p => p.replace(/^"|"$/g, '').trim());
       return { name: parts[0] || '', mobile: normalizeMobileNumber(parts[1] || '') };
     }).filter(r => r.name);
-    const existingLower = new Set(customers.map(c => c.name.toLowerCase()));
+    let invalidMobileCount = 0;
+    parsedRows.forEach(r => {
+      if (r.mobile && r.mobile.length !== 10) { invalidMobileCount++; r.mobile = ''; }
+    });
+    const existingLower = new Set(customers.filter(c => !c.deleted).map(c => normalizeNameKey(c.name)));
     const newOnes = [];
     parsedRows.forEach(r => {
-      const lower = r.name.toLowerCase();
-      if (!existingLower.has(lower)) { existingLower.add(lower); newOnes.push(r); }
+      const key = normalizeNameKey(r.name);
+      if (!existingLower.has(key)) { existingLower.add(key); newOnes.push(r); }
     });
     if (!newOnes.length) { showToast('⚠️ Import करण्यासाठी नवीन Customer सापडले नाहीत!'); document.getElementById('cf-import-file').value = ''; return; }
     const rows = newOnes.map((r, i) => ({
-      id: Date.now() + i, name: r.name, mobile: r.mobile, inactive: false, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
+      id: Date.now() + i, name: r.name, mobile: r.mobile, inactive: false, deleted: false, year_history: [], setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
     }));
     showSync(true);
     const { error } = await sb.from('aj_customers').insert(rows);
     showSync(false);
     document.getElementById('cf-import-file').value = '';
     if (error) { showToast('⚠️ Import होऊ शकले नाही'); return; }
-    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, mobile: r.mobile, inactive: false, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
+    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, mobile: r.mobile, inactive: false, deleted: false, yearHistory: [], setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
     renderCustomerFollowupTable();
     renderWaList();
-    logAudit('⬆️ Excel मधून Customers Import केले', `${newOnes.length} नवीन Customers`);
+    logAudit('⬆️ Excel मधून Customers Import केले', `${newOnes.length} नवीन Customers${invalidMobileCount ? `, ${invalidMobileCount} चुकीचे Mobile Number रिकामे ठेवले` : ''}`);
     showToast(`✅ ${newOnes.length} Customers Import झाले!`);
   };
   reader.readAsText(file);
@@ -2063,7 +2202,7 @@ function renderWaList() {
   const countEl = document.getElementById('cf-wa-count');
   if (!listEl) return;
   const q = (document.getElementById('cf-wa-search')?.value || '').toLowerCase();
-  const list = customers.filter(c => !c.inactive && (!q || c.name.toLowerCase().includes(q)));
+  const list = customers.filter(c => !c.inactive && !c.deleted && (!q || c.name.toLowerCase().includes(q)));
   if (countEl) countEl.textContent = `${list.length} Active Customers`;
   if (!list.length) {
     listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📲</div><p>WhatsApp पाठवण्यासाठी Active Customer सापडला नाही</p></div>`;
