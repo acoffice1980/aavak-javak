@@ -627,7 +627,7 @@
         <div class="user-avatar" id="user-avatar">S</div>
         <span class="user-name" id="user-display">Sudhir</span>
       </div>
-      <button class="logout-btn" onclick="doLogout()">Logout</button>
+      <button class="logout-btn" onclick="openLogoutModal()">Logout</button>
     </div>
   </div>
 
@@ -1087,6 +1087,18 @@
   </div>
 </div>
 
+<!-- LOGOUT CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="logout-modal">
+  <div class="modal">
+    <div class="modal-title">🚪 Logout करायचं का?</div>
+    <p style="font-size:13px;color:var(--text2)">तुम्हाला खरंच Logout करायचं आहे का?</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeLogoutModal()">रद्द करा</button>
+      <button class="btn-danger" onclick="confirmLogout()">✅ हो, Logout करा</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT MODAL -->
 <div class="modal-overlay hidden" id="edit-modal">
   <div class="modal">
@@ -1300,6 +1312,17 @@ async function doLogin() {
   if (currentRole === 'admin') renderStaffTable();
   loadWaTemplate();
   setTimeout(autoBackupAllData, 1500);
+}
+
+function openLogoutModal() {
+  document.getElementById('logout-modal').classList.remove('hidden');
+}
+function closeLogoutModal() {
+  document.getElementById('logout-modal').classList.add('hidden');
+}
+function confirmLogout() {
+  closeLogoutModal();
+  doLogout();
 }
 
 function doLogout() {
