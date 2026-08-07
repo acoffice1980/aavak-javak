@@ -1087,6 +1087,18 @@
   </div>
 </div>
 
+<!-- GENERIC CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-title" id="confirm-modal-title">पक्कं आहे का?</div>
+    <p style="font-size:13px;color:var(--text2)" id="confirm-modal-msg"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeConfirmModal()">रद्द करा</button>
+      <button class="btn-danger" id="confirm-modal-btn" onclick="runConfirmModalAction()">Confirm करा</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOGOUT CONFIRM MODAL -->
 <div class="modal-overlay hidden" id="logout-modal">
   <div class="modal">
@@ -1312,6 +1324,26 @@ async function doLogin() {
   if (currentRole === 'admin') renderStaffTable();
   loadWaTemplate();
   setTimeout(autoBackupAllData, 1500);
+  const pendingCount = records.filter(r => r.status === 'Pending').length;
+  setTimeout(() => showToast(`👋 नमस्कार ${user.name}! आज ${pendingCount} नोंदी Pending आहेत.`), 500);
+}
+
+let _confirmModalAction = null;
+function showConfirmModal(title, msg, btnLabel, onConfirm) {
+  document.getElementById('confirm-modal-title').textContent = title;
+  document.getElementById('confirm-modal-msg').textContent = msg;
+  document.getElementById('confirm-modal-btn').textContent = btnLabel || 'Confirm करा';
+  _confirmModalAction = onConfirm;
+  document.getElementById('confirm-modal').classList.remove('hidden');
+}
+function closeConfirmModal() {
+  document.getElementById('confirm-modal').classList.add('hidden');
+  _confirmModalAction = null;
+}
+function runConfirmModalAction() {
+  const fn = _confirmModalAction;
+  closeConfirmModal();
+  if (fn) fn();
 }
 
 function openLogoutModal() {
@@ -1869,21 +1901,22 @@ function clearCustomerSelection() {
   renderCustomerFollowupTable();
 }
 
-async function deleteSelectedCustomers() {
+function deleteSelectedCustomers() {
   if (!selectedCustomerIds.size) return;
   const ids = Array.from(selectedCustomerIds);
-  if (!confirm(`निवडलेले ${ids.length} Customers Trash मध्ये टाकायचे का? (नंतर Restore करता येईल)`)) return;
-  showSync(true);
-  const { error } = await sb.from('aj_customers').update({ deleted: true }).in('id', ids);
-  showSync(false);
-  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
-  const deletedNames = customers.filter(c => ids.includes(c.id)).map(c => c.name).join(', ');
-  customers.forEach(c => { if (ids.includes(c.id)) c.deleted = true; });
-  selectedCustomerIds.clear();
-  renderCustomerFollowupTable();
-  renderWaList();
-  logAudit(`🗑️ ${ids.length} Customers एकत्र Trash मध्ये टाकले`, deletedNames);
-  showToast(`🗑️ ${ids.length} Customers Trash मध्ये गेले!`);
+  showConfirmModal('🗑️ Selected Customers Trash मध्ये टाकायचे का?', `निवडलेले ${ids.length} Customers Trash मध्ये टाकले जातील. (नंतर Restore करता येईल)`, '🗑️ हो, Trash मध्ये टाका', async () => {
+    showSync(true);
+    const { error } = await sb.from('aj_customers').update({ deleted: true }).in('id', ids);
+    showSync(false);
+    if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+    const deletedNames = customers.filter(c => ids.includes(c.id)).map(c => c.name).join(', ');
+    customers.forEach(c => { if (ids.includes(c.id)) c.deleted = true; });
+    selectedCustomerIds.clear();
+    renderCustomerFollowupTable();
+    renderWaList();
+    logAudit(`🗑️ ${ids.length} Customers एकत्र Trash मध्ये टाकले`, deletedNames);
+    showToast(`🗑️ ${ids.length} Customers Trash मध्ये गेले!`);
+  });
 }
 
 function renderCustomerFollowupTable() {
@@ -1961,20 +1994,26 @@ function toggleMobileColumn() {
   document.querySelectorAll('#cf-tbody .cf-mobile-col').forEach(td => { td.style.display = show ? '' : 'none'; });
 }
 
-async function toggleCustomerInactive(id) {
+function toggleCustomerInactive(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
   const newVal = !c.inactive;
-  if (newVal && !confirm(`"${c.name}" ला यावर्षी ITR Return File करायचं नाही म्हणून X मार्क करायचं का?`)) return;
-  c.inactive = newVal;
-  showSync(true);
-  const { error } = await sb.from('aj_customers').update({ inactive: newVal }).eq('id', id);
-  showSync(false);
-  if (error) { showToast('⚠️ Update होऊ शकले नाही'); c.inactive = !newVal; renderCustomerFollowupTable(); return; }
-  renderCustomerFollowupTable();
-  renderWaList();
-  logAudit(newVal ? '✖ Customer यावर्षी ITR File करणार नाही (X मार्क)' : '✅ Customer पुन्हा Active केला', c.name);
-  showToast(newVal ? '✖ Customer X मार्क झाला!' : '✅ Customer Active झाला!');
+  const applyToggle = async () => {
+    c.inactive = newVal;
+    showSync(true);
+    const { error } = await sb.from('aj_customers').update({ inactive: newVal }).eq('id', id);
+    showSync(false);
+    if (error) { showToast('⚠️ Update होऊ शकले नाही'); c.inactive = !newVal; renderCustomerFollowupTable(); return; }
+    renderCustomerFollowupTable();
+    renderWaList();
+    logAudit(newVal ? '✖ Customer यावर्षी ITR File करणार नाही (X मार्क)' : '✅ Customer पुन्हा Active केला', c.name);
+    showToast(newVal ? '✖ Customer X मार्क झाला!' : '✅ Customer Active झाला!');
+  };
+  if (newVal) {
+    showConfirmModal('✖ X मार्क करायचं का?', `"${c.name}" ला यावर्षी ITR Return File करायचं नाही म्हणून X मार्क करायचं का?`, '✖ हो, X मार्क करा', applyToggle);
+  } else {
+    applyToggle();
+  }
 }
 
 async function addCustomerManual() {
@@ -2021,19 +2060,20 @@ async function toggleCustomerFlag(id, field, value) {
   showToast('✅ Update झाले!');
 }
 
-async function deleteCustomerFollowup(id) {
+function deleteCustomerFollowup(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
-  if (!confirm(`"${c.name}" ला Trash मध्ये टाकायचे का? (नंतर Restore करता येईल)`)) return;
-  showSync(true);
-  const { error } = await sb.from('aj_customers').update({ deleted: true }).eq('id', id);
-  showSync(false);
-  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
-  c.deleted = true;
-  selectedCustomerIds.delete(id);
-  renderCustomerFollowupTable();
-  logAudit('🗑️ Customer Trash मध्ये टाकला', c.name);
-  showToast('🗑️ Customer Trash मध्ये गेला! (Restore करता येईल)');
+  showConfirmModal('🗑️ Trash मध्ये टाकायचं का?', `"${c.name}" ला Trash मध्ये टाकायचे का? (नंतर Restore करता येईल)`, '🗑️ हो, Trash मध्ये टाका', async () => {
+    showSync(true);
+    const { error } = await sb.from('aj_customers').update({ deleted: true }).eq('id', id);
+    showSync(false);
+    if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+    c.deleted = true;
+    selectedCustomerIds.delete(id);
+    renderCustomerFollowupTable();
+    logAudit('🗑️ Customer Trash मध्ये टाकला', c.name);
+    showToast('🗑️ Customer Trash मध्ये गेला! (Restore करता येईल)');
+  });
 }
 
 async function restoreCustomer(id) {
@@ -2050,18 +2090,19 @@ async function restoreCustomer(id) {
   showToast('♻️ Customer Restore झाला!');
 }
 
-async function permanentDeleteCustomer(id) {
+function permanentDeleteCustomer(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
-  if (!confirm(`"${c.name}" ला कायमचं (Permanently) Delete करायचं का? हे परत आणता येणार नाही!`)) return;
-  showSync(true);
-  const { error } = await sb.from('aj_customers').delete().eq('id', id);
-  showSync(false);
-  if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
-  customers = customers.filter(x => x.id !== id);
-  renderCustomerFollowupTable();
-  logAudit('🗑️ Customer कायमचा Delete केला', c.name);
-  showToast('🗑️ Customer कायमचा Delete झाला!');
+  showConfirmModal('🗑️ कायमचं Delete करायचं का?', `"${c.name}" ला कायमचं (Permanently) Delete करायचं का? हे परत आणता येणार नाही!`, '🗑️ हो, कायमचं Delete करा', async () => {
+    showSync(true);
+    const { error } = await sb.from('aj_customers').delete().eq('id', id);
+    showSync(false);
+    if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+    customers = customers.filter(x => x.id !== id);
+    renderCustomerFollowupTable();
+    logAudit('🗑️ Customer कायमचा Delete केला', c.name);
+    showToast('🗑️ Customer कायमचा Delete झाला!');
+  });
 }
 
 function viewCustomerHistory(id) {
