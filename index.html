@@ -395,8 +395,11 @@
   tr.cf-inactive .chk-cell { text-decoration: none; }
   .cf-sticky-action { background: var(--surface); }
   tr.cf-inactive .cf-sticky-action { background: var(--surface); }
-  #cf-tbody-table th { text-align: center; line-height: 1.3; white-space: nowrap; }
+  #cf-tbody-table th { text-align: center; line-height: 1.3; white-space: nowrap; font-size: 11px; padding: 8px 6px; }
   #cf-tbody-table th:nth-child(1), #cf-tbody-table th:nth-child(2), #cf-tbody-table th:nth-child(3) { text-align: left; }
+  #cf-tbody-table td { padding: 8px 6px; font-size: 13px; }
+  #cf-tbody-table th.chk-cell, #cf-tbody-table td.chk-cell { width: 52px; }
+  #cf-tbody-table th:nth-child(3), #cf-tbody-table td:nth-child(3) { min-width: 130px; }
   #cf-tbody-table .chk-cell, #cf-tbody-table td:nth-child(4) { text-align: center; }
   table { width: 100%; border-collapse: collapse; }
   thead tr { background: var(--surface2); }
@@ -973,17 +976,18 @@
         <table id="cf-tbody-table">
           <thead>
             <tr>
-              <th style="text-align:center"><input type="checkbox" id="cf-select-all" onchange="toggleSelectAllCustomers(this.checked)"></th>
+              <th class="chk-cell" style="text-align:center"><input type="checkbox" id="cf-select-all" onchange="toggleSelectAllCustomers(this.checked)"></th>
               <th>#</th>
               <th>Customer चे नाव</th>
               <th id="cf-th-mobile">Mobile</th>
-              <th>All<br>Tick</th>
-              <th>Setup<br>Done</th>
-              <th>Checking<br>Done</th>
-              <th>Return<br>Upload<br>Done</th>
-              <th>Print<br>Done</th>
-              <th>Payment<br>Done</th>
-              <th>Print<br>Issue</th>
+              <th class="chk-cell">All<br>Tick</th>
+              <th class="chk-cell">Statement<br>Received</th>
+              <th class="chk-cell">Setup<br>Done</th>
+              <th class="chk-cell">Checking<br>Done</th>
+              <th class="chk-cell">Return<br>Upload<br>Done</th>
+              <th class="chk-cell">Print<br>Done</th>
+              <th class="chk-cell">Payment<br>Done</th>
+              <th class="chk-cell">Print<br>Issue</th>
               <th>Status</th>
               <th class="cf-sticky-action">Action</th>
             </tr>
@@ -1009,6 +1013,10 @@
       </div>
       <div class="filter-bar">
         <input type="text" id="cf-wa-search" placeholder="WhatsApp पाठवण्यासाठी Customer शोधा..." oninput="renderWaList()" style="min-width:200px">
+        <select id="cf-wa-statement-filter" onchange="renderWaList()">
+          <option value="all">सर्व Customers चे Numbers दाखवा</option>
+          <option value="pending" selected>फक्त Statement Not Received Customers दाखवा</option>
+        </select>
         <span class="filter-count" id="cf-wa-count"></span>
       </div>
       <div id="cf-wa-list"></div>
@@ -1205,7 +1213,7 @@ function mapAuditFromDb(a) {
   return { id: a.id, time: a.time, user: a.user_name, action: a.action, details: a.details };
 }
 function mapCustomerFromDb(c) {
-  return { id: c.id, name: c.name, mobile: c.mobile || '', inactive: !!c.inactive, deleted: !!c.deleted, yearHistory: c.year_history || [], setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+  return { id: c.id, name: c.name, mobile: c.mobile || '', inactive: !!c.inactive, deleted: !!c.deleted, yearHistory: c.year_history || [], statementReceived: !!c.statement_received, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
 }
 
 function levenshteinDist(a, b) {
@@ -1943,7 +1951,7 @@ function renderCustomerFollowupTable() {
   if (countEl) countEl.textContent = statusFilter === 'trash' ? `${list.length} Trash मधील Customers` : `${list.length} Customers`;
   updateBulkBar();
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="13"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
     return;
   }
   if (statusFilter === 'trash') {
@@ -1951,7 +1959,7 @@ function renderCustomerFollowupTable() {
       <tr class="cf-inactive">
         <td></td>
         <td style="color:var(--text3);font-size:12px">${i + 1}</td>
-        <td colspan="10" style="font-weight:500">${esc(c.name)} <span style="font-size:12px;color:var(--text3)">(${esc(c.mobile || 'Mobile नाही')})</span></td>
+        <td colspan="11" style="font-weight:500">${esc(c.name)} <span style="font-size:12px;color:var(--text3)">(${esc(c.mobile || 'Mobile नाही')})</span></td>
         <td class="cf-sticky-action" style="white-space:nowrap">
           <button class="icon-btn" title="Restore करा" onclick="restoreCustomer(${c.id})">♻️</button>
           <button class="icon-btn del" title="कायमचं Delete करा" onclick="permanentDeleteCustomer(${c.id})">🗑️</button>
@@ -1967,6 +1975,7 @@ function renderCustomerFollowupTable() {
       <td style="font-weight:500">${esc(c.name)}</td>
       <td class="cf-mobile-col" style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — सर्व 6 Tick करा" ${['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'].every(f => c[f]) ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleAllFlagsForCustomer(${c.id}, this.checked)"></td>
+      <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Statement Received" ${c.statementReceived ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'statementReceived', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Setup Done" ${c.setupDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'setupDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Checking Done" ${c.checkingDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'checkingDone', this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Return Upload Done" ${c.returnUploadDone ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'returnUploadDone', this.checked)"></td>
@@ -2048,14 +2057,15 @@ async function toggleCustomerFlag(id, field, value) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
   if (c.inactive) { showToast('⚠️ हा Customer X मार्क आहे — आधी Active करा!'); renderCustomerFollowupTable(); return; }
-  const dbFieldMap = { setupDone: 'setup_done', checkingDone: 'checking_done', returnUploadDone: 'return_upload_done', printDone: 'print_done', paymentDone: 'payment_done', printIssueDone: 'print_issue_done' };
-  const labelMap = { setupDone: 'Setup Done', checkingDone: 'Checking Done', returnUploadDone: 'Return Upload Done', printDone: 'Print Done', paymentDone: 'Payment Done', printIssueDone: 'Print Issue to Customer' };
+  const dbFieldMap = { statementReceived: 'statement_received', setupDone: 'setup_done', checkingDone: 'checking_done', returnUploadDone: 'return_upload_done', printDone: 'print_done', paymentDone: 'payment_done', printIssueDone: 'print_issue_done' };
+  const labelMap = { statementReceived: 'Statement Received', setupDone: 'Setup Done', checkingDone: 'Checking Done', returnUploadDone: 'Return Upload Done', printDone: 'Print Done', paymentDone: 'Payment Done', printIssueDone: 'Print Issue to Customer' };
   const prevValue = c[field];
   c[field] = value;
   showSync(true);
   const { error } = await sb.from('aj_customers').update({ [dbFieldMap[field]]: value }).eq('id', id);
   showSync(false);
   if (error) { showToast('⚠️ Update होऊ शकले नाही'); c[field] = prevValue; renderCustomerFollowupTable(); return; }
+  if (field === 'statementReceived') renderWaList();
   logAudit(`✅ ${c.name} — ${labelMap[field]}`, value ? 'पूर्ण झाले ✔️' : 'पूर्ण नाही ✖️');
   showToast('✅ Update झाले!');
 }
@@ -2266,16 +2276,19 @@ function renderWaList() {
   const countEl = document.getElementById('cf-wa-count');
   if (!listEl) return;
   const q = (document.getElementById('cf-wa-search')?.value || '').toLowerCase();
-  const list = customers.filter(c => !c.inactive && !c.deleted && (!q || c.name.toLowerCase().includes(q)));
-  if (countEl) countEl.textContent = `${list.length} Active Customers`;
+  const stmtFilter = document.getElementById('cf-wa-statement-filter')?.value || 'all';
+  let list = customers.filter(c => !c.inactive && !c.deleted && (!q || c.name.toLowerCase().includes(q)));
+  if (stmtFilter === 'pending') list = list.filter(c => !c.statementReceived);
+  list.sort((a, b) => a.name.localeCompare(b.name, 'mr'));
+  if (countEl) countEl.textContent = stmtFilter === 'pending' ? `${list.length} Customers (Statement Not Received)` : `${list.length} Active Customers`;
   if (!list.length) {
-    listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📲</div><p>WhatsApp पाठवण्यासाठी Active Customer सापडला नाही</p></div>`;
+    listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📲</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div>`;
     return;
   }
   listEl.innerHTML = list.map(c => `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:0.5px solid var(--border)">
       <div>
-        <div style="font-weight:500">${esc(c.name)}</div>
+        <div style="font-weight:500">${esc(c.name)} ${c.statementReceived ? '<span class="badge badge-done" style="margin-left:6px">Statement ✔️</span>' : ''}</div>
         <div style="font-size:12px;color:var(--text3)">${esc(c.mobile || 'Mobile नंबर नाही')}</div>
       </div>
       <button class="btn-add" style="padding:6px 14px;font-size:12px" onclick="sendWaMessage(${c.id})" ${c.mobile ? '' : 'disabled'}>📲 WhatsApp पाठवा</button>
