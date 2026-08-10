@@ -911,6 +911,16 @@
             <label>Mobile Number (WhatsApp साठी)</label>
             <input type="text" id="cf-new-mobile" placeholder="उदा. 9876543210" onkeydown="if(event.key==='Enter')addCustomerManual()">
           </div>
+          <div class="field">
+            <label>Work Type</label>
+            <select id="cf-new-worktype">
+              <option value="">— निवडा —</option>
+              <option value="Audit">Audit</option>
+              <option value="ITR Return">ITR Return</option>
+              <option value="Accounting">Accounting</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
         </div>
         <div class="form-actions" style="justify-content:flex-start;flex-wrap:wrap">
           <button class="btn-add" onclick="addCustomerManual()">➕ Customer Add करा</button>
@@ -928,6 +938,13 @@
           <option value="active">Status: फक्त Active</option>
           <option value="inactive">Status: फक्त X (ITR File नाही करायचं)</option>
           <option value="trash">🗑️ Trash (Deleted)</option>
+        </select>
+        <select id="cf-worktype-filter" onchange="renderCustomerFollowupTable()">
+          <option value="all">Type: सर्व</option>
+          <option value="Audit">Type: Audit</option>
+          <option value="ITR Return">Type: ITR Return</option>
+          <option value="Accounting">Type: Accounting</option>
+          <option value="Other">Type: Other</option>
         </select>
         <select id="cf-filter-setupDone" onchange="renderCustomerFollowupTable()">
           <option value="all">Setup: सर्व</option>
@@ -979,6 +996,7 @@
               <th class="chk-cell" style="text-align:center"><input type="checkbox" id="cf-select-all" onchange="toggleSelectAllCustomers(this.checked)"></th>
               <th>#</th>
               <th>Customer चे नाव</th>
+              <th>Type</th>
               <th id="cf-th-mobile">Mobile</th>
               <th class="chk-cell">All<br>Tick</th>
               <th class="chk-cell">Statement<br>Received</th>
@@ -1213,7 +1231,7 @@ function mapAuditFromDb(a) {
   return { id: a.id, time: a.time, user: a.user_name, action: a.action, details: a.details };
 }
 function mapCustomerFromDb(c) {
-  return { id: c.id, name: c.name, mobile: c.mobile || '', inactive: !!c.inactive, deleted: !!c.deleted, yearHistory: c.year_history || [], statementReceived: !!c.statement_received, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+  return { id: c.id, name: c.name, mobile: c.mobile || '', workType: c.work_type || '', inactive: !!c.inactive, deleted: !!c.deleted, yearHistory: c.year_history || [], statementReceived: !!c.statement_received, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
 }
 
 function levenshteinDist(a, b) {
@@ -1934,6 +1952,7 @@ function renderCustomerFollowupTable() {
   const searchEl = document.getElementById('cf-search');
   const q = (searchEl ? searchEl.value : '').toLowerCase();
   const statusFilter = document.getElementById('cf-status-filter')?.value || 'all';
+  const worktypeFilter = document.getElementById('cf-worktype-filter')?.value || 'all';
   const colFields = ['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'];
   const colFilters = {};
   colFields.forEach(f => { colFilters[f] = document.getElementById(`cf-filter-${f}`)?.value || 'all'; });
@@ -1942,6 +1961,7 @@ function renderCustomerFollowupTable() {
   list = list.filter(c => !q || fuzzyNameMatch(c.name, q) || (c.mobile || '').includes(q));
   if (statusFilter === 'active') list = list.filter(c => !c.inactive);
   if (statusFilter === 'inactive') list = list.filter(c => c.inactive);
+  if (worktypeFilter !== 'all') list = list.filter(c => c.workType === worktypeFilter);
   colFields.forEach(f => {
     if (colFilters[f] === 'done') list = list.filter(c => c[f]);
     if (colFilters[f] === 'pending') list = list.filter(c => !c[f]);
@@ -1951,7 +1971,7 @@ function renderCustomerFollowupTable() {
   if (countEl) countEl.textContent = statusFilter === 'trash' ? `${list.length} Trash मधील Customers` : `${list.length} Customers`;
   updateBulkBar();
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="14"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="15"><div class="empty-state"><div class="empty-state-icon">👤</div><p>या Filter मध्ये कोणताही Customer सापडला नाही</p></div></td></tr>`;
     return;
   }
   if (statusFilter === 'trash') {
@@ -1973,6 +1993,15 @@ function renderCustomerFollowupTable() {
       <td style="text-align:center"><input type="checkbox" ${selectedCustomerIds.has(c.id) ? 'checked' : ''} onchange="toggleSelectOneCustomer(${c.id}, this.checked)"></td>
       <td style="color:var(--text3);font-size:12px">${i + 1}</td>
       <td style="font-weight:500">${esc(c.name)}</td>
+      <td>
+        <select style="font-size:11px;padding:4px 6px;border-radius:6px;border:0.5px solid var(--border);background:var(--surface)" onchange="updateCustomerWorkType(${c.id}, this.value)">
+          <option value="" ${!c.workType ? 'selected' : ''}>—</option>
+          <option value="Audit" ${c.workType === 'Audit' ? 'selected' : ''}>Audit</option>
+          <option value="ITR Return" ${c.workType === 'ITR Return' ? 'selected' : ''}>ITR Return</option>
+          <option value="Accounting" ${c.workType === 'Accounting' ? 'selected' : ''}>Accounting</option>
+          <option value="Other" ${c.workType === 'Other' ? 'selected' : ''}>Other</option>
+        </select>
+      </td>
       <td class="cf-mobile-col" style="color:var(--text2);font-size:13px">${esc(c.mobile || '-')}</td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — सर्व 6 Tick करा" ${['setupDone','checkingDone','returnUploadDone','printDone','paymentDone','printIssueDone'].every(f => c[f]) ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleAllFlagsForCustomer(${c.id}, this.checked)"></td>
       <td class="chk-cell"><input type="checkbox" title="${esc(c.name)} — Statement Received" ${c.statementReceived ? 'checked' : ''} ${c.inactive ? 'disabled' : ''} onchange="toggleCustomerFlag(${c.id}, 'statementReceived', this.checked)"></td>
