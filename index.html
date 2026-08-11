@@ -1875,13 +1875,26 @@ function cfProgressBar(c) {
 }
 
 function resetCustomerFilters() {
-  ['cf-status-filter','cf-filter-setupDone','cf-filter-checkingDone','cf-filter-returnUploadDone','cf-filter-printDone','cf-filter-paymentDone','cf-filter-printIssueDone'].forEach(id => {
+  ['cf-status-filter','cf-worktype-filter','cf-filter-setupDone','cf-filter-checkingDone','cf-filter-returnUploadDone','cf-filter-printDone','cf-filter-paymentDone','cf-filter-printIssueDone'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.value = el.id === 'cf-status-filter' ? 'all' : 'all';
+    if (el) el.value = 'all';
   });
   const s = document.getElementById('cf-search');
   if (s) s.value = '';
   renderCustomerFollowupTable();
+}
+
+async function updateCustomerWorkType(id, value) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  const prev = c.workType;
+  c.workType = value;
+  showSync(true);
+  const { error } = await sb.from('aj_customers').update({ work_type: value }).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Update होऊ शकले नाही'); c.workType = prev; renderCustomerFollowupTable(); return; }
+  logAudit(`🏷️ ${c.name} — Work Type बदलला`, value || '—');
+  showToast('✅ Type Update झाला!');
 }
 
 function updateBulkBar() {
@@ -1979,7 +1992,7 @@ function renderCustomerFollowupTable() {
       <tr class="cf-inactive">
         <td></td>
         <td style="color:var(--text3);font-size:12px">${i + 1}</td>
-        <td colspan="11" style="font-weight:500">${esc(c.name)} <span style="font-size:12px;color:var(--text3)">(${esc(c.mobile || 'Mobile नाही')})</span></td>
+        <td colspan="12" style="font-weight:500">${esc(c.name)} <span style="font-size:12px;color:var(--text3)">(${esc(c.mobile || 'Mobile नाही')})</span></td>
         <td class="cf-sticky-action" style="white-space:nowrap">
           <button class="icon-btn" title="Restore करा" onclick="restoreCustomer(${c.id})">♻️</button>
           <button class="icon-btn del" title="कायमचं Delete करा" onclick="permanentDeleteCustomer(${c.id})">🗑️</button>
@@ -2057,8 +2070,10 @@ function toggleCustomerInactive(id) {
 async function addCustomerManual() {
   const input = document.getElementById('cf-new-name');
   const mobileInput = document.getElementById('cf-new-mobile');
+  const worktypeInput = document.getElementById('cf-new-worktype');
   const name = input.value.trim();
   let mobile = mobileInput.value.trim();
+  const workType = worktypeInput ? worktypeInput.value : '';
   if (!name) { showToast('⚠️ Customer चे नाव टाका!'); return; }
   const nameKey = normalizeNameKey(name);
   if (customers.some(c => !c.deleted && normalizeNameKey(c.name) === nameKey)) { showToast('⚠️ हा Customer आधीच यादीत आहे!'); return; }
@@ -2066,16 +2081,17 @@ async function addCustomerManual() {
     mobile = normalizeMobileNumber(mobile);
     if (mobile.length !== 10) { showToast('⚠️ Mobile Number बरोबर 10 आकड्यांचा टाका (किंवा रिकामं ठेवा)!'); return; }
   }
-  const entry = { id: Date.now(), name, mobile, inactive: false, deleted: false, yearHistory: [], setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
+  const entry = { id: Date.now(), name, mobile, workType, inactive: false, deleted: false, yearHistory: [], statementReceived: false, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: new Date().toISOString() };
   showSync(true);
   const { error } = await sb.from('aj_customers').insert({
-    id: entry.id, name: entry.name, mobile: entry.mobile, inactive: false, deleted: false, year_history: [], setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
+    id: entry.id, name: entry.name, mobile: entry.mobile, work_type: workType, inactive: false, deleted: false, year_history: [], statement_received: false, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: entry.createdAt
   });
   showSync(false);
   if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
   customers.unshift(entry);
   input.value = '';
   mobileInput.value = '';
+  if (worktypeInput) worktypeInput.value = '';
   renderCustomerFollowupTable();
   renderWaList();
   logAudit('👤 नवीन Customer Follow-up मध्ये Add केला', name);
@@ -2254,14 +2270,14 @@ async function importCustomersCSV(file) {
     });
     if (!newOnes.length) { showToast('⚠️ Import करण्यासाठी नवीन Customer सापडले नाहीत!'); document.getElementById('cf-import-file').value = ''; return; }
     const rows = newOnes.map((r, i) => ({
-      id: Date.now() + i, name: r.name, mobile: r.mobile, inactive: false, deleted: false, year_history: [], setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
+      id: Date.now() + i, name: r.name, mobile: r.mobile, inactive: false, deleted: false, year_history: [], statement_received: false, setup_done: false, checking_done: false, return_upload_done: false, print_done: false, payment_done: false, print_issue_done: false, created_at: new Date().toISOString()
     }));
     showSync(true);
     const { error } = await sb.from('aj_customers').insert(rows);
     showSync(false);
     document.getElementById('cf-import-file').value = '';
     if (error) { showToast('⚠️ Import होऊ शकले नाही'); return; }
-    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, mobile: r.mobile, inactive: false, deleted: false, yearHistory: [], setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
+    rows.forEach(r => customers.unshift({ id: r.id, name: r.name, mobile: r.mobile, workType: '', inactive: false, deleted: false, yearHistory: [], statementReceived: false, setupDone: false, checkingDone: false, returnUploadDone: false, printDone: false, paymentDone: false, printIssueDone: false, createdAt: r.created_at }));
     renderCustomerFollowupTable();
     renderWaList();
     logAudit('⬆️ Excel मधून Customers Import केले', `${newOnes.length} नवीन Customers${invalidMobileCount ? `, ${invalidMobileCount} चुकीचे Mobile Number रिकामे ठेवले` : ''}`);
