@@ -642,6 +642,7 @@
     <button class="tab" onclick="switchTab('customer',this)">👤 Customer</button>
     <button class="tab" onclick="switchTab('followup',this)">✅ Follow-up</button>
     <button class="tab" onclick="switchTab('whatsapp',this)">📲 WhatsApp</button>
+    <button class="tab" onclick="switchTab('xerox',this)">🖨️ Xerox Udhari</button>
     <button class="tab" onclick="switchTab('history',this)">🕒 History</button>
     <button class="tab" onclick="switchTab('share',this)">📋 Share / Report</button>
     <button class="tab" id="staff-tab-btn" onclick="switchTab('staff',this)" style="display:none">👥 Staff Login</button>
@@ -1040,6 +1041,74 @@
       <div id="cf-wa-list"></div>
     </div>
 
+    <!-- XEROX UDHARI (SEPARATE SECTION) -->
+    <div id="sec-xerox" class="section">
+      <div class="form-card">
+        <div class="form-card-title">🖨️ Xerox Udhari Nond</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Customer चे नाव</label>
+            <input type="text" id="xr-name" placeholder="उदा. Ramesh Sharma" oninput="updateXeroxPreview()">
+          </div>
+          <div class="field">
+            <label>Total Pages</label>
+            <input type="number" id="xr-pages" placeholder="उदा. 50" min="0" oninput="updateXeroxPreview()">
+          </div>
+          <div class="field">
+            <label>Rate per Page (₹)</label>
+            <input type="number" id="xr-rate" placeholder="उदा. 2" min="0" step="0.5" oninput="updateXeroxPreview()">
+          </div>
+          <div class="field">
+            <label>Total Amount (₹)</label>
+            <input type="text" id="xr-total-preview" disabled placeholder="आपोआप दिसेल" style="font-weight:700">
+          </div>
+        </div>
+        <div class="form-actions" style="justify-content:flex-start">
+          <button class="btn-add" onclick="addXeroxEntry()">➕ Udhari Add करा</button>
+          <button class="btn-cancel" onclick="exportXeroxCSV()">⬇️ Excel (CSV) Export करा</button>
+        </div>
+      </div>
+
+      <div class="stats-row" style="margin-bottom:1rem">
+        <div class="stat-card">
+          <div class="stat-label">एकूण Pending Udhari</div>
+          <div class="stat-value" id="xr-total-pending" style="color:var(--red-text)">₹0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">आतापर्यंत जमा (Paid)</div>
+          <div class="stat-value" id="xr-total-paid" style="color:var(--green-text)">₹0</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="xr-search" placeholder="Customer नावाने शोधा..." oninput="renderXeroxTable()" style="min-width:200px">
+        <select id="xr-status-filter" onchange="renderXeroxTable()">
+          <option value="all">Status: सर्व</option>
+          <option value="pending">Status: फक्त Pending (Udhari बाकी)</option>
+          <option value="paid">Status: फक्त Paid</option>
+        </select>
+        <span class="filter-count" id="xr-count"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer चे नाव</th>
+              <th>Pages</th>
+              <th>Rate/Page</th>
+              <th>Total (₹)</th>
+              <th>Paid</th>
+              <th>तारीख</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="xr-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- HISTORY / AUDIT LOG -->
     <div id="sec-history" class="section">
       <div class="form-card-title" style="margin-bottom:1rem">🕒 बदल / Activity History</div>
@@ -1214,6 +1283,7 @@ let records = [];
 let audit = [];
 let customers = [];
 let selectedCustomerIds = new Set();
+let xeroxEntries = [];
 let deleteTarget = null;
 let editTarget = null;
 let staffDeleteTarget = null;
@@ -1232,6 +1302,10 @@ function mapAuditFromDb(a) {
 }
 function mapCustomerFromDb(c) {
   return { id: c.id, name: c.name, mobile: c.mobile || '', workType: c.work_type || '', inactive: !!c.inactive, deleted: !!c.deleted, yearHistory: c.year_history || [], statementReceived: !!c.statement_received, setupDone: !!c.setup_done, checkingDone: !!c.checking_done, returnUploadDone: !!c.return_upload_done, printDone: !!c.print_done, paymentDone: !!c.payment_done, printIssueDone: !!c.print_issue_done, createdAt: c.created_at };
+}
+
+function mapXeroxFromDb(x) {
+  return { id: x.id, name: x.customer_name, pages: Number(x.pages) || 0, rate: Number(x.rate_per_page) || 0, total: Number(x.total_amount) || 0, paid: !!x.paid, createdAt: x.created_at };
 }
 
 function levenshteinDist(a, b) {
@@ -1295,6 +1369,8 @@ async function initData() {
   audit = (aData || []).map(mapAuditFromDb);
   const { data: cData } = await sb.from('aj_customers').select('*').order('id', { ascending: false });
   customers = (cData || []).map(mapCustomerFromDb);
+  const { data: xData } = await sb.from('aj_xerox_udhari').select('*').order('id', { ascending: false });
+  xeroxEntries = (xData || []).map(mapXeroxFromDb);
   showSync(false);
   setupRealtime();
 }
@@ -1321,6 +1397,11 @@ function setupRealtime() {
       customers = (data || []).map(mapCustomerFromDb);
       renderCustomerFollowupTable();
       renderWaList();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'aj_xerox_udhari' }, async () => {
+      const { data } = await sb.from('aj_xerox_udhari').select('*').order('id', { ascending: false });
+      xeroxEntries = (data || []).map(mapXeroxFromDb);
+      renderXeroxTable();
     })
     .subscribe();
 }
@@ -1465,6 +1546,7 @@ function switchTab(name, el) {
   if (name === 'customer') renderCustomerView();
   if (name === 'followup') renderCustomerFollowupTable();
   if (name === 'whatsapp') renderWaList();
+  if (name === 'xerox') renderXeroxTable();
   if (name === 'history') renderHistory();
 }
 
@@ -2523,6 +2605,123 @@ function formatDate(d) {
 
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── XEROX UDHARI ── */
+function updateXeroxPreview() {
+  const pages = Number(document.getElementById('xr-pages')?.value) || 0;
+  const rate = Number(document.getElementById('xr-rate')?.value) || 0;
+  const totalEl = document.getElementById('xr-total-preview');
+  if (totalEl) totalEl.value = `₹${(pages * rate).toFixed(2)}`;
+}
+
+async function addXeroxEntry() {
+  const nameInput = document.getElementById('xr-name');
+  const pagesInput = document.getElementById('xr-pages');
+  const rateInput = document.getElementById('xr-rate');
+  const name = nameInput.value.trim();
+  const pages = Number(pagesInput.value) || 0;
+  const rate = Number(rateInput.value) || 0;
+  if (!name) { showToast('⚠️ Customer चे नाव टाका!'); return; }
+  if (pages <= 0) { showToast('⚠️ Pages बरोबर टाका!'); return; }
+  if (rate <= 0) { showToast('⚠️ Rate per Page टाका!'); return; }
+  const total = Math.round(pages * rate * 100) / 100;
+  const entry = { id: Date.now(), name, pages, rate, total, paid: false, createdAt: new Date().toISOString() };
+  showSync(true);
+  const { error } = await sb.from('aj_xerox_udhari').insert({
+    id: entry.id, customer_name: name, pages, rate_per_page: rate, total_amount: total, paid: false, created_at: entry.createdAt
+  });
+  showSync(false);
+  if (error) { showToast('⚠️ Save होऊ शकले नाही'); return; }
+  xeroxEntries.unshift(entry);
+  nameInput.value = '';
+  pagesInput.value = '';
+  rateInput.value = '';
+  document.getElementById('xr-total-preview').value = '';
+  renderXeroxTable();
+  logAudit('🖨️ Xerox Udhari नोंदवली', `${name} — ${pages} Pages × ₹${rate} = ₹${total}`);
+  showToast('✅ Udhari Add झाली!');
+}
+
+async function toggleXeroxPaid(id, value) {
+  const x = xeroxEntries.find(e => e.id === id);
+  if (!x) return;
+  const prev = x.paid;
+  x.paid = value;
+  showSync(true);
+  const { error } = await sb.from('aj_xerox_udhari').update({ paid: value }).eq('id', id);
+  showSync(false);
+  if (error) { showToast('⚠️ Update होऊ शकले नाही'); x.paid = prev; renderXeroxTable(); return; }
+  renderXeroxTable();
+  logAudit(`💰 ${x.name} — Xerox Udhari ${value ? 'Paid' : 'Pending'} मार्क केली`, `₹${x.total}`);
+  showToast(value ? '✅ Paid मार्क झाली!' : '↺ Pending मार्क झाली!');
+}
+
+function deleteXeroxEntry(id) {
+  const x = xeroxEntries.find(e => e.id === id);
+  if (!x) return;
+  showConfirmModal('🗑️ Udhari नोंद Delete करायची का?', `"${x.name}" — ₹${x.total} ची नोंद कायमची Delete होईल.`, '🗑️ Delete करा', async () => {
+    showSync(true);
+    const { error } = await sb.from('aj_xerox_udhari').delete().eq('id', id);
+    showSync(false);
+    if (error) { showToast('⚠️ Delete होऊ शकले नाही'); return; }
+    xeroxEntries = xeroxEntries.filter(e => e.id !== id);
+    renderXeroxTable();
+    logAudit('🗑️ Xerox Udhari नोंद Delete केली', `${x.name} — ₹${x.total}`);
+    showToast('🗑️ नोंद Delete झाली!');
+  });
+}
+
+function renderXeroxTable() {
+  const tbody = document.getElementById('xr-tbody');
+  const countEl = document.getElementById('xr-count');
+  if (!tbody) return;
+  const q = (document.getElementById('xr-search')?.value || '').toLowerCase();
+  const statusFilter = document.getElementById('xr-status-filter')?.value || 'all';
+  let list = xeroxEntries.filter(x => !q || x.name.toLowerCase().includes(q));
+  if (statusFilter === 'pending') list = list.filter(x => !x.paid);
+  if (statusFilter === 'paid') list = list.filter(x => x.paid);
+
+  const pendingTotal = xeroxEntries.filter(x => !x.paid).reduce((s, x) => s + x.total, 0);
+  const paidTotal = xeroxEntries.filter(x => x.paid).reduce((s, x) => s + x.total, 0);
+  const pendingEl = document.getElementById('xr-total-pending');
+  const paidEl = document.getElementById('xr-total-paid');
+  if (pendingEl) pendingEl.textContent = `₹${pendingTotal.toFixed(2)}`;
+  if (paidEl) paidEl.textContent = `₹${paidTotal.toFixed(2)}`;
+
+  if (countEl) countEl.textContent = `${list.length} नोंदी`;
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">🖨️</div><p>अजून कोणतीही Xerox Udhari नोंदवलेली नाही</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((x, i) => `
+    <tr style="${x.paid ? 'opacity:0.55' : ''}">
+      <td style="color:var(--text3);font-size:12px">${i + 1}</td>
+      <td style="font-weight:500;${x.paid ? 'text-decoration:line-through' : ''}">${esc(x.name)}</td>
+      <td>${x.pages}</td>
+      <td>₹${x.rate}</td>
+      <td style="font-weight:600">₹${x.total.toFixed(2)}</td>
+      <td class="chk-cell"><input type="checkbox" title="Paid मार्क करा" ${x.paid ? 'checked' : ''} onchange="toggleXeroxPaid(${x.id}, this.checked)"></td>
+      <td style="font-size:12px;color:var(--text3)">${formatDate((x.createdAt || '').split('T')[0])}</td>
+      <td><button class="icon-btn del" title="Delete" onclick="deleteXeroxEntry(${x.id})">🗑️</button></td>
+    </tr>
+  `).join('');
+}
+
+function exportXeroxCSV() {
+  const header = ['Customer Name', 'Pages', 'Rate per Page', 'Total Amount', 'Status', 'Date'];
+  const rows = xeroxEntries.map(x => [x.name, x.pages, x.rate, x.total.toFixed(2), x.paid ? 'Paid' : 'Pending', (x.createdAt || '').split('T')[0]]);
+  const csv = header.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `xerox-udhari-${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📊 Xerox Udhari List Export झाली!');
 }
 </script>
 </body>
