@@ -639,6 +639,7 @@
     <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
     <button class="tab" onclick="switchTab('aavak',this)">📥 Aavak <span class="tab-badge" id="aavak-count">0</span></button>
     <button class="tab" onclick="switchTab('javak',this)">📤 Javak <span class="tab-badge" id="javak-count">0</span></button>
+    <button class="tab" onclick="switchTab('juna',this)">📦 जुनी नोंद <span class="tab-badge" id="juna-count">0</span></button>
     <button class="tab" onclick="switchTab('customer',this)">👤 Customer</button>
     <button class="tab" onclick="switchTab('followup',this)">✅ Follow-up</button>
     <button class="tab" onclick="switchTab('whatsapp',this)">📲 WhatsApp</button>
@@ -661,6 +662,10 @@
         <div class="stat-card">
           <div class="stat-label">एकूण Javak</div>
           <div class="stat-value red" id="stat-javak">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">जुनी नोंद (Old Stock)</div>
+          <div class="stat-value amber" id="stat-juna">0</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Pending Entries</div>
@@ -842,6 +847,71 @@
       </div>
     </div>
 
+    <!-- JUNI NOND (EXISTING/OLD DOCUMENTS - ONE TIME BULK FEEDING) -->
+    <div id="sec-juna" class="section">
+      <div class="form-card">
+        <div class="form-card-title">📦 जुनी / आधीपासून असलेली Documents नोंद करा (Old Stock Entry)</div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Software सुरू करण्याआधी Office मध्ये आधीपासून जमा असलेल्या Documents ची एकदाच नोंद इथे करा — म्हणजे तुम्हाला Office मधल्या सगळ्या Documents ची पूर्ण यादी (जुनी + नवीन) एकाच ठिकाणी दिसेल.</p>
+        <div class="form-grid">
+          <div class="field">
+            <label>Customer चे नाव *</label>
+            <input type="text" id="o-customer" placeholder="उदा. Ramesh Sharma">
+          </div>
+          <div class="field">
+            <label>Document/s * (एकापेक्षा जास्त असल्यास , ने वेगळे करा)</label>
+            <input type="text" id="o-document" placeholder="उदा. ITR 2022-23, Pan Card">
+          </div>
+          <div class="field">
+            <label>मूळ तारीख (Document कधी आले होते, माहीत असल्यास)</label>
+            <input type="date" id="o-date">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="o-status">
+              <option value="Pending">Pending</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>शेरा (Optional)</label>
+          <input type="text" id="o-note" placeholder="उदा. कपाट क्र. 2, फाईल नं. 14 इ.">
+        </div>
+        <div class="form-actions">
+          <button class="btn-add" onclick="addEntry('juna')">📦 जुनी नोंद Add करा</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="o-search" placeholder="🔍 Customer / Document..." oninput="renderTable('juna')" style="min-width:200px">
+        <select id="o-filter-status" onchange="renderTable('juna')">
+          <option value="">सर्व Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Done">Done</option>
+        </select>
+        <input type="date" id="o-filter-date" onchange="renderTable('juna')" title="तारखेनुसार फिल्टर">
+        <span class="filter-count" id="o-count-label"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer</th>
+              <th>Document</th>
+              <th>तारीख</th>
+              <th>नोंद केले</th>
+              <th>Status</th>
+              <th>शेरा</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="juna-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- SHARE -->
     <div id="sec-share" class="section">
       <div class="stats-row" style="margin-bottom:1.5rem">
@@ -869,6 +939,7 @@
             <option value="pending">Pending नोंदी</option>
             <option value="aavak">फक्त Aavak</option>
             <option value="javak">फक्त Javak</option>
+            <option value="juna">फक्त जुनी नोंद</option>
           </select>
           <input type="date" id="share-from" onchange="generateReport()" style="display:none">
           <span id="share-to-label" style="display:none;font-size:12px;color:var(--text2)">ते</span>
@@ -1551,7 +1622,7 @@ function switchTab(name, el) {
 }
 
 async function addEntry(type) {
-  const pre = type === 'aavak' ? 'a' : 'j';
+  const pre = type === 'aavak' ? 'a' : (type === 'javak' ? 'j' : 'o');
   const customer = document.getElementById(pre + '-customer').value.trim();
   const docRaw = document.getElementById(pre + '-document').value.trim();
   const date = document.getElementById(pre + '-date').value;
@@ -1559,9 +1630,10 @@ async function addEntry(type) {
   const note = document.getElementById(pre + '-note').value.trim();
   const expectedReturn = type === 'javak' ? document.getElementById('j-return').value : '';
   if (!customer || !docRaw) { showToast('⚠️ Customer आणि Document भरणे आवश्यक आहे!'); return; }
-  if (!date) { showToast('⚠️ तारीख निवडा!'); return; }
+  if (type !== 'juna' && !date) { showToast('⚠️ तारीख निवडा!'); return; }
+  const finalDate = date || new Date().toISOString().split('T')[0];
   const documents = docRaw.split(',').map(d => d.trim()).filter(Boolean);
-  const entry = { id: Date.now(), type, customer, documents, date, status, note, expectedReturn, by: currentUser, createdAt: new Date().toISOString() };
+  const entry = { id: Date.now(), type, customer, documents, date: finalDate, status, note, expectedReturn, by: currentUser, createdAt: new Date().toISOString() };
   showSync(true);
   const { error } = await sb.from('aj_records').insert({
     id: entry.id, type: entry.type, customer: entry.customer, documents: entry.documents,
@@ -1576,7 +1648,8 @@ async function addEntry(type) {
   document.getElementById(pre + '-note').value = '';
   if (type === 'javak') document.getElementById('j-return').value = '';
   playBeep();
-  logAudit(type === 'aavak' ? '📥 नवीन Aavak नोंद' : '📤 नवीन Javak नोंद', `${customer} — ${documents.join(', ')}`);
+  const labelMap = { aavak: '📥 नवीन Aavak नोंद', javak: '📤 नवीन Javak नोंद', juna: '📦 जुनी नोंद Add केली' };
+  logAudit(labelMap[type] || 'नोंद', `${customer} — ${documents.join(', ')}`);
   showToast('✅ नोंद यशस्वीरीत्या केली!');
   updateAll();
 }
@@ -1654,18 +1727,20 @@ function renderCustomerView() {
   }
   const aavakCount = matches.filter(r => r.type === 'aavak').length;
   const javakCount = matches.filter(r => r.type === 'javak').length;
+  const junaCount = matches.filter(r => r.type === 'juna').length;
   box.innerHTML = `
     <div class="stats-row" style="margin-bottom:1rem">
       <div class="stat-card"><div class="stat-label">एकूण नोंदी</div><div class="stat-value">${matches.length}</div></div>
       <div class="stat-card"><div class="stat-label">Aavak</div><div class="stat-value green">${aavakCount}</div></div>
       <div class="stat-card"><div class="stat-label">Javak</div><div class="stat-value red">${javakCount}</div></div>
+      <div class="stat-card"><div class="stat-label">जुनी नोंद</div><div class="stat-value amber">${junaCount}</div></div>
     </div>
     <div class="activity-list">
       ${matches.map(r => `
         <div class="activity-item">
-          <div class="activity-dot ${r.type === 'aavak' ? 'green' : 'red'}"></div>
+          <div class="activity-dot ${r.type === 'aavak' ? 'green' : (r.type === 'javak' ? 'red' : '')}" style="${r.type === 'juna' ? 'background:var(--amber)' : ''}"></div>
           <div class="activity-info">
-            <div class="activity-main">${r.type === 'aavak' ? '📥' : '📤'} ${esc(r.customer)} — ${esc((r.documents || []).join(', '))}</div>
+            <div class="activity-main">${r.type === 'aavak' ? '📥' : (r.type === 'javak' ? '📤' : '📦')} ${esc(r.customer)} — ${esc((r.documents || []).join(', '))}</div>
             <div class="activity-sub">
               <span class="badge ${r.status === 'Done' ? 'badge-done' : 'badge-pending'}" style="font-size:10px;padding:1px 6px">${r.status}</span>
               · ${esc(r.by)}${r.note ? ' · 💬 ' + esc(r.note) : ''}${r.expectedReturn ? ' · 🔁 Return: ' + formatDate(r.expectedReturn) : ''}
@@ -1681,12 +1756,13 @@ function renderCustomerView() {
 function updateAll() {
   renderTable('aavak');
   renderTable('javak');
+  renderTable('juna');
   updateStats();
   updateDashboard();
 }
 
 function getFiltered(type) {
-  const pre = type === 'aavak' ? 'a' : 'j';
+  const pre = type === 'aavak' ? 'a' : (type === 'javak' ? 'j' : 'o');
   const search = (document.getElementById(pre + '-search')?.value || '').toLowerCase();
   const filterStatus = document.getElementById(pre + '-filter-status')?.value || '';
   const filterDate = document.getElementById(pre + '-filter-date')?.value || '';
@@ -1700,8 +1776,9 @@ function getFiltered(type) {
 }
 
 function renderTable(type) {
-  const pre = type === 'aavak' ? 'a' : 'j';
+  const pre = type === 'aavak' ? 'a' : (type === 'javak' ? 'j' : 'o');
   const tbody = document.getElementById(type + '-tbody');
+  if (!tbody) return;
   const filtered = getFiltered(type);
   const label = document.getElementById(pre + '-count-label');
   if (label) label.textContent = filtered.length + ' नोंदी';
@@ -1737,14 +1814,19 @@ function updateStats() {
   const today = new Date().toISOString().split('T')[0];
   const aavak = records.filter(r => r.type === 'aavak');
   const javak = records.filter(r => r.type === 'javak');
+  const juna = records.filter(r => r.type === 'juna');
   const pending = records.filter(r => r.status === 'Pending');
   const todayRecs = records.filter(r => r.date === today);
   document.getElementById('stat-aavak').textContent = aavak.length;
   document.getElementById('stat-javak').textContent = javak.length;
+  const statJuna = document.getElementById('stat-juna');
+  if (statJuna) statJuna.textContent = juna.length;
   document.getElementById('stat-pending').textContent = pending.length;
   document.getElementById('stat-today').textContent = todayRecs.length;
   document.getElementById('aavak-count').textContent = aavak.length;
   document.getElementById('javak-count').textContent = javak.length;
+  const junaCountEl = document.getElementById('juna-count');
+  if (junaCountEl) junaCountEl.textContent = juna.length;
 }
 
 function updateDashboard() {
@@ -1755,10 +1837,10 @@ function updateDashboard() {
   } else {
     list.innerHTML = recent.map(r => `
       <div class="activity-item">
-        <div class="activity-dot ${r.type === 'aavak' ? 'green' : 'red'}"></div>
+        <div class="activity-dot ${r.type === 'aavak' ? 'green' : (r.type === 'javak' ? 'red' : '')}" style="${r.type === 'juna' ? 'background:var(--amber)' : ''}"></div>
         <div class="activity-info">
           <div class="activity-main">${esc(r.customer)} — ${esc((r.documents || []).join(', '))}</div>
-          <div class="activity-sub">${r.type === 'aavak' ? '📥 Aavak' : '📤 Javak'} · ${esc(r.by)} · <span class="badge ${r.status === 'Done' ? 'badge-done' : 'badge-pending'}" style="font-size:10px;padding:1px 6px">${r.status}</span></div>
+          <div class="activity-sub">${r.type === 'aavak' ? '📥 Aavak' : (r.type === 'javak' ? '📤 Javak' : '📦 जुनी नोंद')} · ${esc(r.by)} · <span class="badge ${r.status === 'Done' ? 'badge-done' : 'badge-pending'}" style="font-size:10px;padding:1px 6px">${r.status}</span></div>
         </div>
         <div class="activity-time">${formatDate(r.date)}</div>
       </div>
@@ -1822,6 +1904,7 @@ function getReportRecords() {
   else if (type === 'pending') { filtered = records.filter(r => r.status === 'Pending'); title = '⏳ Pending नोंदी'; }
   else if (type === 'aavak') { filtered = records.filter(r => r.type === 'aavak'); title = '📥 Aavak नोंदी'; }
   else if (type === 'javak') { filtered = records.filter(r => r.type === 'javak'); title = '📤 Javak नोंदी'; }
+  else if (type === 'juna') { filtered = records.filter(r => r.type === 'juna'); title = '📦 जुनी नोंदी'; }
   return { filtered, title };
 }
 
@@ -1829,6 +1912,7 @@ function generateReport() {
   const { filtered, title } = getReportRecords();
   const aavakList = filtered.filter(r => r.type === 'aavak');
   const javakList = filtered.filter(r => r.type === 'javak');
+  const junaList = filtered.filter(r => r.type === 'juna');
 
   let text = `🏢 AAVAK JAVAK OFFICE RECORDS\n${title}\n${'─'.repeat(35)}\n\n`;
   if (aavakList.length) {
@@ -1845,6 +1929,13 @@ function generateReport() {
     });
     text += '\n';
   }
+  if (junaList.length) {
+    text += `📦 जुनी नोंद (${junaList.length})\n`;
+    junaList.forEach((r, i) => {
+      text += `${i + 1}. ${r.customer}\n   📄 ${(r.documents || []).join(', ')}\n   📅 ${formatDate(r.date)} · ${r.status} · ${r.by}\n${r.note ? '   💬 ' + r.note + '\n' : ''}`;
+    });
+    text += '\n';
+  }
   if (!filtered.length) { text += 'कोणतीही नोंद नाही.\n'; }
   text += `${'─'.repeat(35)}\nएकूण: ${filtered.length} नोंदी`;
   document.getElementById('share-output').textContent = text;
@@ -1857,7 +1948,7 @@ function exportCSV() {
   let csv = 'Type,Customer,Documents,Date,Status,Return Date,Note,Entered By\n';
   filtered.forEach(r => {
     const row = [
-      r.type === 'aavak' ? 'Aavak' : 'Javak',
+      r.type === 'aavak' ? 'Aavak' : (r.type === 'javak' ? 'Javak' : 'Juni Nond'),
       r.customer,
       (r.documents || []).join('; '),
       r.date,
@@ -1885,7 +1976,7 @@ function printReport() {
   let rows = filtered.map((r, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${r.type === 'aavak' ? 'Aavak' : 'Javak'}</td>
+      <td>${r.type === 'aavak' ? 'Aavak' : (r.type === 'javak' ? 'Javak' : 'Juni Nond')}</td>
       <td>${esc(r.customer)}</td>
       <td>${esc((r.documents || []).join(', '))}</td>
       <td>${formatDate(r.date)}</td>
@@ -1931,8 +2022,11 @@ function onGlobalSearch(val) {
   val = val.toLowerCase();
   document.getElementById('a-search').value = val;
   document.getElementById('j-search').value = val;
+  const oSearch = document.getElementById('o-search');
+  if (oSearch) oSearch.value = val;
   renderTable('aavak');
   renderTable('javak');
+  renderTable('juna');
   if (val) {
     const hasAavak = getFiltered('aavak').length > 0;
     const hasJavak = getFiltered('javak').length > 0;
@@ -2443,7 +2537,7 @@ function autoBackupAllData() {
   if (records.length) {
     let csv = 'Type,Customer,Documents,Date,Status,Return Date,Note,Entered By\n';
     records.forEach(r => {
-      const row = [r.type === 'aavak' ? 'Aavak' : 'Javak', r.customer, (r.documents || []).join('; '), r.date, r.status, r.expectedReturn || '', r.note || '', r.by].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+      const row = [r.type === 'aavak' ? 'Aavak' : (r.type === 'javak' ? 'Javak' : 'Juni Nond'), r.customer, (r.documents || []).join('; '), r.date, r.status, r.expectedReturn || '', r.note || '', r.by].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
       csv += row + '\n';
     });
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
